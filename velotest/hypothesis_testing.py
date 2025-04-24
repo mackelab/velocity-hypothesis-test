@@ -112,9 +112,9 @@ def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', **kw
     :return: See `run_hypothesis_test`.
     """
     X_expr = adata.layers[ekey]
-    X_velo = adata.layers[vkey]
-    Z_expr = adata.obsm[basis]
-    Z_velo_position = adata.obsm[basis] + adata.obsm[f'{basis}_velocity']
+    X_velo_vector = adata.layers[vkey]
+    Z_expr = adata.obsm[f"X_{basis}"]
+    Z_velo_position = Z_expr + adata.obsm[f'velocity_{basis}']
 
     X_expr = torch.tensor(X_expr)
     X_velo_vector = torch.tensor(X_velo_vector)
