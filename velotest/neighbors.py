@@ -35,16 +35,19 @@ def find_neighbors(x, k_neighbors=5, metric="euclidean"):
 
     return indices
 
-def find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices)-> list:
+
+def find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices, threshold_degree=22.5) -> list:
     """
     Finds the neighbors of each cell in 2D that are in a 2*threshold_degree cone around the velocity vector.
     :param Z_expr: 2D embedding of positions
     :param Z_velo_position: 2D embedding of tip of velocity vectors
     :param nn_indices: indices of the k nearest neighbors for each cell
+    :param threshold_degree: angle in degrees to define the cone around the velocity vector,
+    e.g. specify 22.5° for a cone of 45°
     :return: return list of neighbours in direction of velocity for each cell
     """
     neighbour_directionality = cos_directionality_batched(Z_expr, Z_velo_position, Z_expr[nn_indices])
     # this allows a derivation of 22.5° (a cone of 45° around velocity vector), 0.707 for 45° (cone of 90°)
-    selected_neighbours = neighbour_directionality > 0.9238795325
+    selected_neighbours = neighbour_directionality > math.cos(math.radians(threshold_degree))
     neighbours_in_direction_of_velocity = [nn_indices[i][neighbors] for i, neighbors in enumerate(selected_neighbours)]
     return neighbours_in_direction_of_velocity
