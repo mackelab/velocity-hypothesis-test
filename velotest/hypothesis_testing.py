@@ -51,7 +51,7 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     to look for neighbors in direction of velocity
     @param batch_size: batch size for computing cosine similarity
     @param correction: correction method for multiple testing. 'benjamini–hochberg' or None
-    @return: p_values_ (p-values from test, cells where test couldn't be run are assigned a value of 2),
+    @return: p_values_ (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
     h0_rejected , test_statistics_velocity, test_statistics_random, neighborhoods
     """
     number_cells = X_expr.shape[0]
@@ -99,8 +99,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     return p_values_all, h0_rejected_all, test_statistics_velocity.numpy(), test_statistics_random.numpy(), neighborhoods
 
 
-def run_hypothesis_test_from(adata, ekey='Ms', vkey='velocity', basis='umap', **kwargs):
-    '''
+def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', **kwargs):
+    """
     Runs the hypothesis test using high dimensional expressions, high dimensional velocity,
     and the embeddings from an adata object. For details, see `run_hypothesis_test`.
 
@@ -109,8 +109,8 @@ def run_hypothesis_test_from(adata, ekey='Ms', vkey='velocity', basis='umap', **
     :param vkey: Name of layer in adata object containing high dimensional velocity data.
     :param basis: Name of embedding.
     :param kwargs: Additional arguments for `run_hypothesis_test`.
-    :return:
-    '''
+    :return: See `run_hypothesis_test`.
+    """
     X_expr = adata.layers[ekey]
     X_velo = adata.layers[vkey]
     Z_expr = adata.obsm[basis]

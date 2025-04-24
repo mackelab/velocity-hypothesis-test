@@ -27,7 +27,8 @@ cos_directionality_one_cell_batched = torch.vmap(cos_directionality_one_cell)
 def mean_cos_directionality_varying_neighborhoods(expression: torch.Tensor, velocity_vector: torch.Tensor,
                                                   neighborhoods: list, original_indices_cells):
     """
-        Calculates the mean cosine similarity between the velocity of a cell and multiple sets of cells in the neighborhood of the cell.
+        Calculates the mean cosine similarity between the velocity of a cell and
+        multiple sets of cells in the neighborhood of the cell.
 
         @param expression: expression of all cells
         @param velocity_vector: velocity vectors of all cells, not position (x+v) of the velocity
