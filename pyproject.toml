@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-doc = [
+docs = [
     "sphinx >= 7.4.7",
 ]
 dev = [
