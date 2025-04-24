@@ -1,6 +1,6 @@
 Velotest is a hypothesis test for how well any 2D embedding of positional and velocity data represents
 the original high dimensional data. It's current main application is to help practitioners using 2D embeddings
-of single cell RNA sequencing data with RNA velocity to decide which 2D velocity vectors are faithfully representing
+of single cell RNA sequencing data with RNA velocity decide which 2D velocity vectors are faithfully representing
 the high-dimensional data.
 
 Installation
@@ -43,7 +43,7 @@ If you have a 2D embedding of any data (see below for scRNA-seq data), you can u
 where low_d_velocity_position is the tip's position of the 2D velocity vector, NOT the velocity vector originating in low_d_position.
 
 
-An application on single-cell sequencing data could look like this (following `scvelo's tutorial <https://scvelo.readthedocs.io/en/stable/VelocityBasics.html>`_):
+An application on single-cell sequencing data (runnable notebook: `notebooks/demo.ipynb`) could look like this (following `scvelo's tutorial <https://scvelo.readthedocs.io/en/stable/VelocityBasics.html>`_):
 
 .. code-block:: python
 
@@ -63,6 +63,9 @@ An application on single-cell sequencing data could look like this (following `s
 
    # Run test
    uncorrected_p_values, h0_rejected, _, _, _ = run_hypothesis_test_on(adata)
+
+
+For plotting, you can use the `plotting` module. Have a look at `notebooks/demo.ipynb` for an example.
 
 
 Details
