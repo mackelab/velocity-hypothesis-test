@@ -9,9 +9,10 @@ from velotest.test_statistic import mean_cos_directionality_varying_neighborhood
 def p_values(test_statistics_velocity, test_statistics_random):
     """
     Compute p-values using the test statistics from the permutations.
-    @param test_statistics_velocity: (#cells)
-    @param test_statistics_random: (#cells, #neighborhoods)
-    @return:
+
+    :param test_statistics_velocity: (#cells)
+    :param test_statistics_random: (#cells, #neighborhoods)
+    :return:
     """
     return torch.sum(test_statistics_random >= test_statistics_velocity.unsqueeze(1), axis=-1) / \
         test_statistics_random.shape[-1]
@@ -20,9 +21,10 @@ def p_values(test_statistics_velocity, test_statistics_random):
 def benjamini_hochberg(p_values, alpha=0.05):
     """
     Apply Benjamini-Hochberg correction for multiple testing.
-    @param p_values: (#cells)
-    @param alpha: significance level
-    @return:
+
+    :param p_values: (#cells)
+    :param alpha: significance level
+    :return:
     """
     sorted_p_values = np.sort(p_values)
     m = len(p_values)
@@ -37,22 +39,26 @@ def benjamini_hochberg(p_values, alpha=0.05):
 
 #:ArrayLike[int]
 def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
-                        number_neighborhoods=100, number_neighbors_to_sample_from=50,
+                        number_neighborhoods=1000, number_neighbors_to_sample_from=50,
                         correction='benjamini–hochberg', seed=0):
     """
     Samples random neighborhoods for every cell and uses the high-dimensional cosine similarity between
     the velocity of each cell and the cells in the direction of the velocity (in 2D) as test statistic.
 
-    @param X_expr: high-dimensional expressions
-    @param X_velo_vector: high-dimensional velocity vector, not position (x+v)
-    @param Z_expr: embedding for expressions
-    @param number_neighborhoods: number of neighborhoods used to define null distribution
-    @param number_neighbors_to_sample_from: number of neighbors to sample neighborhoods from and
-    to look for neighbors in direction of velocity
-    @param batch_size: batch size for computing cosine similarity
-    @param correction: correction method for multiple testing. 'benjamini–hochberg' or None
-    @return: p_values_ (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
-    h0_rejected , test_statistics_velocity, test_statistics_random, neighborhoods
+    :param X_expr: high-dimensional expressions
+    :param X_velo_vector: high-dimensional velocity vector, not position (x+v)
+    :param Z_expr: embedding for expressions
+    :param number_neighborhoods: number of neighborhoods used to define null distribution
+    :param number_neighbors_to_sample_from: number of neighbors to sample neighborhoods from and
+        to look for neighbors in direction of velocity
+    :param batch_size: batch size for computing cosine similarity
+    :param correction: correction method for multiple testing. 'benjamini–hochberg' or None
+    :return:
+        - ``p_values_`` (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
+        - ``h0_rejected``
+        - ``test_statistics_velocity``
+        - ``test_statistics_random``
+        - ``neighborhoods``
     """
     number_cells = X_expr.shape[0]
 

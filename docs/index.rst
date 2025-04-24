@@ -29,6 +29,7 @@ or
 .. code-block:: bash
 
    pip install -e ".[dev]",
+
 respectively.
 
 Usage
@@ -40,12 +41,12 @@ If you have a 2D embedding of any data (see below for scRNA-seq data), you can u
 
    from velotest.hypothesis_testing import run_hypothesis_test
 
-   p_values, h0_rejected, _, _, _ = run_hypothesis_test(high_d_position, high_d_velocity, low_d_position, low_d_velocity_position)
+   uncorrected_p_values, h0_rejected, _, _, _ = run_hypothesis_test(high_d_position, high_d_velocity, low_d_position, low_d_velocity_position)
 
 where low_d_velocity_position is the tip's position of the 2D velocity vector, NOT the velocity vector originating in low_d_position.
 
 
-An application on single-cell sequencing data could look like this:
+An application on single-cell sequencing data could look like this (following `scvelo's tutorial <https://scvelo.readthedocs.io/en/stable/VelocityBasics.html>`_):
 
 .. code-block:: python
 
@@ -64,7 +65,7 @@ An application on single-cell sequencing data could look like this:
    scvelo.pl.velocity_embedding(adata)
 
    # Run test
-   p_values, h0_rejected, _, _, _ = run_hypothesis_test_on(adata)
+   uncorrected_p_values, h0_rejected, _, _, _ = run_hypothesis_test_on(adata)
 
 
 Details
@@ -88,4 +89,6 @@ but can be applied to any application with positional and velocity data.
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
+   source/modules
 
