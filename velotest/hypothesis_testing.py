@@ -35,9 +35,8 @@ def benjamini_hochberg(p_values, alpha=0.05):
     return h0_rejected[p_values.argsort()]
 
 
-# TODO: Just use high dimensional velocity instead of x+v
 #:ArrayLike[int]
-def run_hypothesis_test(X_expr, X_velo_position, Z_expr, Z_velo_position,
+def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
                         number_neighborhoods=100, number_neighbors_to_sample_from=50,
                         correction='benjamini–hochberg', seed=0):
     """
@@ -45,7 +44,7 @@ def run_hypothesis_test(X_expr, X_velo_position, Z_expr, Z_velo_position,
     the velocity of each cell and the cells in the direction of the velocity (in 2D) as test statistic.
 
     @param X_expr: high-dimensional expressions
-    @param X_velo_position: high-dimensional position of velocities (x+v)
+    @param X_velo_vector: high-dimensional velocity vector, not position (x+v)
     @param Z_expr: embedding for expressions
     @param number_neighborhoods: number of neighborhoods used to define null distribution
     @param number_neighbors_to_sample_from: number of neighbors to sample neighborhoods from and
@@ -78,7 +77,7 @@ def run_hypothesis_test(X_expr, X_velo_position, Z_expr, Z_velo_position,
                      in_direction_of_velocity, random in
                      zip(neighbors_in_direction_of_velocity, neighborhoods_random)]
 
-    test_statistics = mean_cos_directionality_varying_neighborhoods(torch.tensor(X_expr), torch.tensor(X_velo_position),
+    test_statistics = mean_cos_directionality_varying_neighborhoods(torch.tensor(X_expr), torch.tensor(X_velo_vector),
                                                                     neighborhoods, non_empty_neighborhoods_indices)
     test_statistics_velocity = test_statistics[:, 0]
     test_statistics_random = test_statistics[:, 1:]
@@ -118,8 +117,8 @@ def run_hypothesis_test_from(adata, ekey='Ms', vkey='velocity', basis='umap', **
     Z_velo_position = adata.obsm[basis] + adata.obsm[f'{basis}_velocity']
 
     X_expr = torch.tensor(X_expr)
-    #X_velo_position = torch.tensor(X_velo)
+    X_velo_vector = torch.tensor(X_velo_vector)
     Z_expr = torch.tensor(Z_expr)
     Z_velo_position = torch.tensor(Z_velo_position)
 
-    return run_hypothesis_test(X_expr, X_velo_position, Z_expr, Z_velo_position, **kwargs)
+    return run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, **kwargs)
