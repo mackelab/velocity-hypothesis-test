@@ -102,6 +102,29 @@ def arrow_plot(
     return ax
 
 
+def marker_plot(X_emb: np.ndarray,
+                p_values: np.ndarray,
+                h0_rejected: np.ndarray,
+                ax: matplotlib.axes.Axes = None,
+                multiplier_marker_size=1.5):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(8, 8), dpi=150)
+
+    significance = h0_rejected
+    no_test = p_values == 2
+
+    scatter(X_emb[significance], marker="*", size=int(multiplier_marker_size * 50), ax=ax, label_colormap="orange",
+            label="significant")
+    scatter(X_emb[np.logical_and(~significance, ~no_test)], marker="s", size=int(multiplier_marker_size * 15), ax=ax,
+            label_colormap="grey", label="h0 not rejected")
+    scatter(X_emb[np.logical_and(~significance, no_test)], marker="o", size=int(multiplier_marker_size * 20), ax=ax,
+            label_colormap="blue", label="unable to test")
+    ax.set(xticks=[], yticks=[], box_aspect=1)
+    ax.legend()
+
+    return ax
+
+
 def get_glyph_colors(x, labels, label_colormap):
     if labels is not None:
         if isinstance(label_colormap, dict):
