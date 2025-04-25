@@ -10,7 +10,7 @@ from sklearn.utils import check_random_state
 
 
 def scatter(X_emb: np.ndarray, label_colormap: Union[Dict, List] = None, labels: pd.Series = None,
-            ax: matplotlib.axes.Axes = None, title=None, marker="o", size=25, show_labels: bool = True):
+            ax: matplotlib.axes.Axes = None, title=None, marker="o", size=25, show_labels: bool = True, **kwargs):
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 8), dpi=150)
 
@@ -23,7 +23,7 @@ def scatter(X_emb: np.ndarray, label_colormap: Union[Dict, List] = None, labels:
     glyph_colors = get_glyph_colors(X_emb, labels, label_colormap)
     random_state = check_random_state(0)
     draw_order = random_state.permutation(X_emb.shape[0])
-    ax.scatter(*X_emb[draw_order].T, c=glyph_colors[draw_order], s=size, lw=0, alpha=0.5, marker=marker)
+    ax.scatter(*X_emb[draw_order].T, c=glyph_colors[draw_order], s=size, lw=0, alpha=0.5, marker=marker, **kwargs)
 
     return ax
 
@@ -31,7 +31,8 @@ def scatter(X_emb: np.ndarray, label_colormap: Union[Dict, List] = None, labels:
 def arrow_plot(
         X_emb: np.ndarray,
         V_emb: np.ndarray,
-        significance: np.ndarray = None,
+        p_values: np.ndarray = None,
+        h0_rejected: np.ndarray = None,
         labels: pd.Series = None,
         label_colormap: Union[Dict, List] = None,
         ax: matplotlib.axes.Axes = None,
@@ -54,6 +55,15 @@ def arrow_plot(
         "linewidth": 0.2,
         "zorder": 3,
     }
+
+    if h0_rejected is not None or p_values is not None:
+        if (h0_rejected is not None) and (p_values is not None):
+            significance = h0_rejected.copy().astype(int)
+            significance[p_values == 2] = 2
+        else:
+            raise ValueError("Both `h0_rejected` and `p_values` must be provided.")
+    else:
+        significance = None
 
     if significance is None:
         ax.quiver(
