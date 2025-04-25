@@ -1,2 +1,6 @@
 .idea/
 docs/_build
+velotest.egg-info/
+notebooks/data/
+tests/data/
+data/

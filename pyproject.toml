@@ -24,3 +24,6 @@ dev = [
 
 [tool.setuptools]
 packages = ["velotest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
