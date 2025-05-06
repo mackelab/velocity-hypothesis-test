@@ -48,6 +48,7 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     :param X_expr: high-dimensional expressions
     :param X_velo_vector: high-dimensional velocity vector, not position (x+v)
     :param Z_expr: embedding for expressions
+    :param Z_velo_position: embedding for velocity position (x+v)
     :param number_neighborhoods: number of neighborhoods used to define null distribution
     :param number_neighbors_to_sample_from: number of neighbors to sample neighborhoods from and
         to look for neighbors in direction of velocity
@@ -60,6 +61,15 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         - ``test_statistics_random``
         - ``neighborhoods``
     """
+    if not isinstance(X_expr, torch.Tensor):
+        X_expr = torch.tensor(X_expr)
+    if not isinstance(X_velo_vector, torch.Tensor):
+        X_velo_vector = torch.tensor(X_velo_vector)
+    if not isinstance(Z_expr, torch.Tensor):
+        Z_expr = torch.tensor(Z_expr)
+    if not isinstance(Z_velo_position, torch.Tensor):
+        Z_velo_position = torch.tensor(Z_velo_position)
+
     number_cells = X_expr.shape[0]
 
     nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
