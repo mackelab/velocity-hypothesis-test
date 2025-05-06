@@ -122,6 +122,13 @@ def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', **kw
     Z_expr = adata.obsm[f"X_{basis}"]
     Z_velo_position = Z_expr + adata.obsm[f'velocity_{basis}']
 
+    if Z_expr.shape[1] > 2:
+        Z_expr = Z_expr[:, :2]
+        Z_velo_position = Z_velo_position[:, :2]
+        print("Warning: Your basis has more than two dimensions. "
+              "Using only the first two dimensions of the embedding for hypothesis testing like scvelo in "
+              "its visualisations.")
+
     X_expr = torch.tensor(X_expr)
     X_velo_vector = torch.tensor(X_velo_vector)
     Z_expr = torch.tensor(Z_expr)
