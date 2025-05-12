@@ -2,12 +2,13 @@ import torch
 from tqdm import tqdm
 
 
-def cos_directionality_one_cell(expression: torch.Tensor, velocity_vector: torch.Tensor,
-                                expressions_neighbours: torch.Tensor):
+def cos_directionality_one_cell_batch_same_neighbors(expression: torch.Tensor, velocity_vector: torch.Tensor,
+                                                     expressions_neighbours: torch.Tensor):
     """
-    Calculates the cosine similarity between the velocity of a cell and multiple sets of cells in the neighborhood of the cell.
+    Calculates the cosine similarity between the velocity of a cell and multiple sets of other cells
+    (e.g., in the neighborhood of the cell). Every set is assumed to have same number of neighbors.
 
-    :param expression:
+    :param expression: vector of gene expressions of the cell
     :param velocity_vector: velocity vector of the cell, not the position (x+v) of the velocity
     :param expressions_neighbours: (#neighborhoods, #neighbors, #genes)
     :return:
@@ -17,30 +18,79 @@ def cos_directionality_one_cell(expression: torch.Tensor, velocity_vector: torch
 
     cos = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
     return cos(expressions_neighbours - expression,
-               velocity_vector.unsqueeze(0).unsqueeze(0).expand(number_neighborhoods,
-                                                                number_neighbors_per_neighborhood, -1))
+               velocity_vector[None, None, :].expand(number_neighborhoods,
+                                                     number_neighbors_per_neighborhood, -1))
 
 
-cos_directionality_one_cell_batched = torch.vmap(cos_directionality_one_cell)
-
-
-def mean_cos_directionality_varying_neighborhoods(expression: torch.Tensor, velocity_vector: torch.Tensor,
-                                                  neighborhoods: list, original_indices_cells):
+def cos_directionality_one_cell_one_neighborhood(expression: torch.Tensor, velocity_vector: torch.Tensor,
+                                                 expressions_neighbours: torch.Tensor):
     """
-        Calculates the mean cosine similarity between the velocity of a cell and
-        multiple sets of cells in the neighborhood of the cell.
+    Calculates the cosine similarity between the velocity of a cell and one set of other cells
+    (e.g., in the neighborhood of the cell).
 
-        :param expression: expression of all cells
-        :param velocity_vector: velocity vectors of all cells, not position (x+v) of the velocity
-        :param neighborhoods: list of length #cells with (#neighborhoods, #neighbors). Neighborhoods of selected cells.
-        :param original_indices_cells: indices of the selected cells in the original expression matrix
-        :return:
-        """
+    :param expression: vector of gene expressions of the cell
+    :param velocity_vector: velocity vector of the cell, not the position (x+v) of the velocity
+    :param expressions_neighbours: (#neighbors, #genes)
+    :return:
+    """
+    cos = torch.nn.CosineSimilarity(dim=-1, eps=1e-6)
+    number_neighbors = expressions_neighbours.shape[0]
+    return cos(expressions_neighbours - expression, velocity_vector[None, :].expand(number_neighbors, -1))
+
+
+def mean_cos_directionality_varying_neighborhoods_same_neighbors(expression: torch.Tensor,
+                                                                 velocity_vector: torch.Tensor,
+                                                                 neighborhoods: list, original_indices_cells):
+    """
+    Mean cos directionality for a varying number of neighbors in a neighborhood across cells but with same number
+    of neighbors per cell:
+    Calculates the mean cosine similarity between the velocity of a cell and
+    multiple sets of other cells (e.g., in the neighborhood of the cell).
+    Every set is assumed to have same number of neighbors.
+
+    :param expression: expression of all cells
+    :param velocity_vector: velocity vectors of all cells, not position (x+v) of the velocity
+    :param neighborhoods: Neighborhoods of selected cells. list of length #cells with (#neighborhoods, #neighbors).
+    :param original_indices_cells: indices of the selected cells in the original expression matrix
+    :return:
+    """
     number_cells = len(neighborhoods)
     number_neighborhoods = neighborhoods[0].shape[0]
     mean_cos_neighborhoods = torch.zeros((number_cells, number_neighborhoods))
     for i, original_index in enumerate(tqdm(original_indices_cells)):
         mean_cos_neighborhoods[i] = torch.mean(
-            cos_directionality_one_cell(expression[original_index], velocity_vector[original_index],
-                                        expression[neighborhoods[i]]), dim=-1)
+            cos_directionality_one_cell_batch_same_neighbors(expression[original_index],
+                                                             velocity_vector[original_index],
+                                                             expression[neighborhoods[i]]), dim=-1)
+    return mean_cos_neighborhoods
+
+
+def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
+                                              velocity_vector: torch.Tensor,
+                                              neighborhoods: list, original_indices_cells):
+    """
+    Mean cos directionality for a varying number of neighbors in the neighborhoods across cells:
+    Calculates the cosine similarity between the velocity of a cell and multiple sets of other cells
+    (e.g., in the neighborhood of the cell). Every set can have a different number of cells.
+
+    :param expression: expression of all cells
+    :param velocity_vector: velocity vectors of all cells, not position (x+v) of the velocity
+    :param neighborhoods: Neighborhoods of selected cells. list of length #cells with lists of varying #neighbors.
+    :param original_indices_cells: indices of the selected cells in the original expression matrix
+    :return:
+    """
+    number_cells = len(neighborhoods)
+    number_neighborhoods = len(neighborhoods[0])
+    mean_cos_neighborhoods = torch.zeros((number_cells, number_neighborhoods))
+    for cell, (original_index, neighborhoods_one_cell) in enumerate(zip(tqdm(original_indices_cells), neighborhoods)):
+        for neighborhood_id, neighborhood in enumerate(neighborhoods_one_cell):
+            if len(neighborhood) == 0:
+                # If the neighborhood is empty, we cannot calculate the test statistic and assign a cosine similarity
+                # of 1. This will lead to more cells where we cannot reject the null hypothesis.
+                mean_cos_neighborhoods[cell, neighborhood_id] = 1
+            else:
+                mean_cos_neighborhoods[cell, neighborhood_id] = torch.mean(
+                    cos_directionality_one_cell_one_neighborhood(expression[original_index],
+                                                                 velocity_vector[original_index],
+                                                                 expression[neighborhood]))
     return mean_cos_neighborhoods

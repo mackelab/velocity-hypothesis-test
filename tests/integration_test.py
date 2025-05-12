@@ -1,9 +1,11 @@
 from velotest.hypothesis_testing import run_hypothesis_test_on
 import scvelo
 import numpy as np
+import pytest
 
 
-def test_run_hypothesis_test_on_pancreas():
+@pytest.mark.parametrize("null_distribution", ('neighbors', 'velocities'))
+def test_run_hypothesis_test_on_pancreas(null_distribution):
     # Load data
     adata = scvelo.datasets.pancreas()
     adata = adata[:50]
@@ -18,6 +20,10 @@ def test_run_hypothesis_test_on_pancreas():
     scvelo.tl.velocity_embedding(adata)
 
     # Run test
-    uncorrected_p_values, h0_rejected, _, _, _ = run_hypothesis_test_on(adata, number_neighborhoods=100, number_neighbors_to_sample_from=20)
-
-    assert np.sum(h0_rejected) >= 1
+    uncorrected_p_values, h0_rejected, _, _, _ = run_hypothesis_test_on(adata, number_neighborhoods=100,
+                                                                        number_neighbors_to_sample_from=20,
+                                                                        null_distribution=null_distribution)
+    assert uncorrected_p_values.shape[0] == adata.n_obs
+    assert h0_rejected.shape[0] == adata.n_obs
+    if null_distribution == 'neighbors':
+        assert np.sum(h0_rejected) >= 1

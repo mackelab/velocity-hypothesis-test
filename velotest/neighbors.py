@@ -49,8 +49,26 @@ def find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices,
         e.g. specify 22.5° for a cone of 45°
     :return: return list of neighbours in direction of velocity for each cell
     """
+    selected_neighbours = select_neighbors_based_on_cos(Z_expr, Z_velo_position, nn_indices, threshold_degree)
+    neighbours_in_direction_of_velocity = [nn_indices[i][neighbours] for i, neighbours in enumerate(selected_neighbours)]
+    return neighbours_in_direction_of_velocity
+
+
+def select_neighbors_based_on_cos(Z_expr, Z_velo_position, nn_indices, threshold_degree):
     neighbour_directionality = cos_directionality_batched(Z_expr, Z_velo_position, Z_expr[nn_indices])
     # this allows a derivation of 22.5° (a cone of 45° around velocity vector), 0.707 for 45° (cone of 90°)
     selected_neighbours = neighbour_directionality > math.cos(math.radians(threshold_degree))
-    neighbours_in_direction_of_velocity = [nn_indices[i][neighbors] for i, neighbors in enumerate(selected_neighbours)]
+    return selected_neighbours
+
+
+select_neighbors_based_on_cos_batched = torch.vmap(select_neighbors_based_on_cos, in_dims=(None, 0, None, None))
+
+
+def find_neighbors_in_direction_of_velocity_multiple(Z_expr, Z_velo_position, nn_indices,
+                                                     threshold_degree=22.5) -> list:
+    selected_neighbours = select_neighbors_based_on_cos_batched(Z_expr, Z_velo_position, nn_indices, threshold_degree)
+    selected_neighbours = selected_neighbours.permute(1, 0, 2)
+    neighbours_in_direction_of_velocity = [[nn_indices[i][neighbours] for neighbours in
+                                            random_neighborhoods_for_one_cell] for i, random_neighborhoods_for_one_cell
+                                           in enumerate(selected_neighbours)]
     return neighbours_in_direction_of_velocity
