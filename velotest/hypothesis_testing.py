@@ -41,7 +41,7 @@ def benjamini_hochberg(p_values, alpha=0.05):
 
 #:ArrayLike[int]
 def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
-                        number_neighborhoods=1000, number_neighbors_to_sample_from=50,
+                        number_neighborhoods=1000, number_neighbors_to_sample_from=50, threshold_degree=22.5,
                         null_distribution='neighbors', correction='benjamini–hochberg', seed=0):
     """
     Samples random neighborhoods for every cell and uses the high-dimensional cosine similarity between
@@ -54,6 +54,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     :param number_neighborhoods: number of neighborhoods used to define null distribution
     :param number_neighbors_to_sample_from: number of neighbors to sample neighborhoods from and
         to look for neighbors in direction of velocity
+    :param threshold_degree: angle in degrees to define the cone around the velocity vector
+        (angle of cone is 2*threshold_degree),
     :param batch_size: batch size for computing cosine similarity
     :param null_distribution: 'neighbors' or 'velocities'. If 'neighbors', the neighborhoods are uniformly sampled from the neighbors.
         If 'velocities', random velocities are sampled and then the neighborhoods are defined by the neighbors in this direction.
@@ -77,7 +79,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     number_cells = X_expr.shape[0]
 
     nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
-    neighbors_in_direction_of_velocity = find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices)
+    neighbors_in_direction_of_velocity = find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices,
+                                                                                 threshold_degree)
 
     non_empty_neighborhoods_bool = [len(neighborhood) != 0 for neighborhood in neighbors_in_direction_of_velocity]
     non_empty_neighborhoods_bool = np.array(non_empty_neighborhoods_bool)
