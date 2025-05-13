@@ -67,7 +67,9 @@ def mean_cos_directionality_varying_neighborhoods_same_neighbors(expression: tor
 
 def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
                                               velocity_vector: torch.Tensor,
-                                              neighborhoods: list, original_indices_cells):
+                                              neighborhoods: list,
+                                              original_indices_cells,
+                                              cosine_empty_neighborhood: float = 2):
     """
     Mean cos directionality for a varying number of neighbors in the neighborhoods across cells:
     Calculates the cosine similarity between the velocity of a cell and multiple sets of other cells
@@ -77,6 +79,9 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
     :param velocity_vector: velocity vectors of all cells, not position (x+v) of the velocity
     :param neighborhoods: Neighborhoods of selected cells. list of length #cells with lists of varying #neighbors.
     :param original_indices_cells: indices of the selected cells in the original expression matrix
+    :param cosine_empty_neighborhood: if the neighborhood is empty, assign this value to the mean cosine similarity.
+        Standard is 2 which is higher then the max of the cosine similarity and will therefore lead to more cells
+        where we cannot reject the null hypothesis.
     :return:
     """
     number_cells = len(neighborhoods)
@@ -85,9 +90,7 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
     for cell, (original_index, neighborhoods_one_cell) in enumerate(zip(tqdm(original_indices_cells), neighborhoods)):
         for neighborhood_id, neighborhood in enumerate(neighborhoods_one_cell):
             if len(neighborhood) == 0:
-                # If the neighborhood is empty, we cannot calculate the test statistic and assign a cosine similarity
-                # of 1. This will lead to more cells where we cannot reject the null hypothesis.
-                mean_cos_neighborhoods[cell, neighborhood_id] = 1
+                mean_cos_neighborhoods[cell, neighborhood_id] = cosine_empty_neighborhood
             else:
                 mean_cos_neighborhoods[cell, neighborhood_id] = torch.mean(
                     cos_directionality_one_cell_one_neighborhood(expression[original_index],
