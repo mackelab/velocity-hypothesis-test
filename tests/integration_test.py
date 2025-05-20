@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 
 
-@pytest.mark.parametrize("null_distribution", ('neighbors', 'velocities'))
-def test_run_hypothesis_test_on_pancreas(null_distribution):
+@pytest.mark.parametrize(("null_distribution", "cosine_empty_neighborhood"), [('neighbors', 2), ('velocities', None), ('velocities', 2)])
+def test_run_hypothesis_test_on_pancreas(null_distribution, cosine_empty_neighborhood):
     # Load data
     adata = scvelo.datasets.pancreas()
     adata = adata[:50]
@@ -22,7 +22,8 @@ def test_run_hypothesis_test_on_pancreas(null_distribution):
     # Run test
     uncorrected_p_values, h0_rejected, _, _, _ = run_hypothesis_test_on(adata, number_neighborhoods=100,
                                                                         number_neighbors_to_sample_from=20,
-                                                                        null_distribution=null_distribution)
+                                                                        null_distribution=null_distribution,
+                                                                        cosine_empty_neighborhood=cosine_empty_neighborhood)
     assert uncorrected_p_values.shape[0] == adata.n_obs
     assert h0_rejected.shape[0] == adata.n_obs
     if null_distribution == 'neighbors':

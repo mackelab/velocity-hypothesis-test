@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from tqdm import tqdm
 
@@ -69,7 +71,7 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
                                               velocity_vector: torch.Tensor,
                                               neighborhoods: list,
                                               original_indices_cells,
-                                              cosine_empty_neighborhood: float = 2):
+                                              cosine_empty_neighborhood: Optional[float] = 2):
     """
     Mean cos directionality for a varying number of neighbors in the neighborhoods across cells:
     Calculates the cosine similarity between the velocity of a cell and multiple sets of other cells
@@ -81,19 +83,32 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
     :param original_indices_cells: indices of the selected cells in the original expression matrix
     :param cosine_empty_neighborhood: if the neighborhood is empty, assign this value to the mean cosine similarity.
         Standard is 2 which is higher then the max of the cosine similarity and will therefore lead to more cells
-        where we cannot reject the null hypothesis.
+        where we cannot reject the null hypothesis (Type II error). -2 would lead to Type I errors.
+        "None" will ignore empty neighborhoods and then return a variable number of mean cosine similarities per cell.
     :return:
     """
     number_cells = len(neighborhoods)
     number_neighborhoods = len(neighborhoods[0])
-    mean_cos_neighborhoods = torch.zeros((number_cells, number_neighborhoods))
+    if cosine_empty_neighborhood is not None:
+        mean_cos_neighborhoods = torch.zeros((number_cells, number_neighborhoods))
+    else:
+        mean_cos_neighborhoods = []
     for cell, (original_index, neighborhoods_one_cell) in enumerate(zip(tqdm(original_indices_cells), neighborhoods)):
+        if cosine_empty_neighborhood is None:
+            mean_cos_neighborhoods_cell = []
         for neighborhood_id, neighborhood in enumerate(neighborhoods_one_cell):
             if len(neighborhood) == 0:
-                mean_cos_neighborhoods[cell, neighborhood_id] = cosine_empty_neighborhood
+                if cosine_empty_neighborhood is not None:
+                    mean_cos_neighborhoods[cell, neighborhood_id] = cosine_empty_neighborhood
             else:
-                mean_cos_neighborhoods[cell, neighborhood_id] = torch.mean(
+                mean_cos_directionality_one_cell_one_neighborhood = torch.mean(
                     cos_directionality_one_cell_one_neighborhood(expression[original_index],
                                                                  velocity_vector[original_index],
                                                                  expression[neighborhood]))
+                if cosine_empty_neighborhood is not None:
+                    mean_cos_neighborhoods[cell, neighborhood_id] = mean_cos_directionality_one_cell_one_neighborhood
+                else:
+                    mean_cos_neighborhoods_cell.append(mean_cos_directionality_one_cell_one_neighborhood)
+        if cosine_empty_neighborhood is None:
+            mean_cos_neighborhoods.append(torch.tensor(mean_cos_neighborhoods_cell))
     return mean_cos_neighborhoods

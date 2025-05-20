@@ -20,6 +20,12 @@ def p_values(test_statistics_velocity, test_statistics_random):
         test_statistics_random.shape[-1]
 
 
+def p_values_list(test_statistics_velocity, test_statistics_random):
+    return torch.tensor(
+        [torch.sum(torch.tensor(set_of_random_statistics) >= observed_statistic) / len(set_of_random_statistics) for
+         observed_statistic, set_of_random_statistics in zip(test_statistics_velocity, test_statistics_random)])
+
+
 def benjamini_hochberg(p_values, alpha=0.05):
     """
     Apply Benjamini-Hochberg correction for multiple testing.
@@ -42,7 +48,8 @@ def benjamini_hochberg(p_values, alpha=0.05):
 #:ArrayLike[int]
 def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
                         number_neighborhoods=1000, number_neighbors_to_sample_from=50, threshold_degree=22.5,
-                        null_distribution='neighbors', correction='benjamini–hochberg', seed=0):
+                        null_distribution='neighbors', correction='benjamini–hochberg', cosine_empty_neighborhood=2,
+                        seed=0):
     """
     Samples random neighborhoods for every cell and uses the high-dimensional cosine similarity between
     the velocity of each cell and the cells in the direction of the velocity (in 2D) as test statistic.
@@ -60,6 +67,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     :param null_distribution: 'neighbors' or 'velocities'. If 'neighbors', the neighborhoods are uniformly sampled from the neighbors.
         If 'velocities', random velocities are sampled and then the neighborhoods are defined by the neighbors in this direction.
     :param correction: correction method for multiple testing. 'benjamini–hochberg' or None
+    :param cosine_empty_neighborhood: See `mean_cos_directionality_varying_neighbors`.
+    :param seed: Random seed for reproducibility.
     :return:
         - ``p_values_`` (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
         - ``h0_rejected``
@@ -67,6 +76,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         - ``test_statistics_random``
         - ``neighborhoods``
     """
+    assert not (null_distribution == 'neighbors' and cosine_empty_neighborhood is None)
+
     if not isinstance(X_expr, torch.Tensor):
         X_expr = torch.tensor(X_expr)
     if not isinstance(X_velo_vector, torch.Tensor):
@@ -113,9 +124,10 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         y = torch.sin(angle)
         Z_velo_position_random = Z_expr + torch.concatenate((x, y), dim=-1)
 
-        neighborhoods_random_velocities = find_neighbors_in_direction_of_velocity_multiple(Z_expr, #Z_expr[None, :].expand(number_neighborhoods, -1, -1),
-                                                                                  Z_velo_position_random,
-                                                                                  nn_indices) #torch.tensor(nn_indices)[None, :].expand(number_neighborhoods, -1, -1))
+        neighborhoods_random_velocities = find_neighbors_in_direction_of_velocity_multiple(Z_expr,
+                                                                                           Z_velo_position_random,
+                                                                                           nn_indices,
+                                                                                           threshold_degree)
         # Remove empty neighborhoods
         neighborhoods_random_velocities = [neighborhoods_random_velocities[cell] for cell in
                                            non_empty_neighborhoods_indices]
@@ -130,13 +142,20 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         test_statistics = mean_cos_directionality_varying_neighbors(X_expr,
                                                                     X_velo_vector,
                                                                     neighborhoods,
-                                                                    non_empty_neighborhoods_indices)
+                                                                    non_empty_neighborhoods_indices,
+                                                                    cosine_empty_neighborhood)
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
-
-    test_statistics_velocity = test_statistics[:, 0]
-    test_statistics_random = test_statistics[:, 1:]
-    p_values_ = p_values(test_statistics_velocity, test_statistics_random).numpy()
+    if cosine_empty_neighborhood is not None:
+        test_statistics_velocity = test_statistics[:, 0]
+        test_statistics_random = test_statistics[:, 1:]
+    else:
+        test_statistics_velocity = [test_statistic[0] for test_statistic in test_statistics]
+        test_statistics_random = [test_statistic[1:] for test_statistic in test_statistics]
+    if cosine_empty_neighborhood is not None:
+        p_values_ = p_values(test_statistics_velocity, test_statistics_random).numpy()
+    else:
+        p_values_ = p_values_list(test_statistics_velocity, test_statistics_random).numpy()
     if correction == 'benjamini–hochberg':
         h0_rejected = benjamini_hochberg(p_values_)
     elif correction is None:
@@ -151,7 +170,12 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         h0_rejected_all[non_empty_neighborhoods_bool] = h0_rejected
     else:
         h0_rejected_all = None
-    return p_values_all, h0_rejected_all, test_statistics_velocity.numpy(), test_statistics_random.numpy(), neighborhoods
+
+    if isinstance(test_statistics_velocity, torch.Tensor):
+        test_statistics_velocity = test_statistics_velocity.numpy()
+    if isinstance(test_statistics_random, torch.Tensor):
+        test_statistics_random = test_statistics_random.numpy()
+    return p_values_all, h0_rejected_all, test_statistics_velocity, test_statistics_random, neighborhoods
 
 
 def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', **kwargs):
