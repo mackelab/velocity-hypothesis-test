@@ -94,16 +94,19 @@ def arrow_plot(
         # have to find an automatic way of doing it
         multiplier = 1
         if labels is not None:
-            scatter(X_emb[significant], label_colormap, labels[significant], ax, marker="*", size=int(multiplier * 50))
-            scatter(X_emb[not_significant], label_colormap, labels[not_significant], ax, marker="s",
-                    size=int(multiplier * 15),
-                    show_labels=False)
             scatter(X_emb[not_tested], label_colormap, labels[not_tested], ax, marker="o", size=int(multiplier * 20),
                     show_labels=False)
+            scatter(X_emb[not_significant], label_colormap, labels[not_significant], ax, marker="s",
+                    size=int(multiplier * 10),
+                    show_labels=False)
+            scatter(X_emb[significant], label_colormap, labels[significant], ax, marker="*", size=int(multiplier * 60),
+                    show_labels=False)
         else:
-            scatter(X_emb[significant], label_colormap, ax=ax, marker="*", size=int(multiplier * 50))
-            scatter(X_emb[not_significant], label_colormap, ax=ax, marker="s", size=int(multiplier * 15))
             scatter(X_emb[not_tested], label_colormap, ax=ax, marker="o", size=int(multiplier * 20))
+            scatter(X_emb[not_significant], label_colormap, ax=ax, marker="s", size=int(multiplier * 10))
+            scatter(X_emb[significant], label_colormap, ax=ax, marker="*", size=int(multiplier * 60))
+    if labels is not None:
+        plot_labels(ax, X_emb, labels)
 
     ax.set(xticks=[], yticks=[], box_aspect=1)
     if title is not None:
@@ -123,12 +126,12 @@ def marker_plot(X_emb: np.ndarray,
     significance = h0_rejected
     no_test = p_values == 2
 
-    scatter(X_emb[significance], marker="*", size=int(multiplier_marker_size * 50), ax=ax, label_colormap="orange",
-            label="significant")
-    scatter(X_emb[np.logical_and(~significance, ~no_test)], marker="s", size=int(multiplier_marker_size * 15), ax=ax,
-            label_colormap="grey", label="h0 not rejected")
     scatter(X_emb[np.logical_and(~significance, no_test)], marker="o", size=int(multiplier_marker_size * 20), ax=ax,
-            label_colormap="blue", label="unable to test")
+            label_colormap="grey", label="unable to test")
+    scatter(X_emb[np.logical_and(~significance, ~no_test)], marker="s", size=int(multiplier_marker_size * 10), ax=ax,
+            label_colormap="lightblue", label="h0 not rejected")
+    scatter(X_emb[significance], marker="*", size=int(multiplier_marker_size * 60), ax=ax, label_colormap="orange",
+            label="significant")
     ax.set(xticks=[], yticks=[], box_aspect=1)
     ax.legend()
 
