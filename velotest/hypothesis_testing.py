@@ -48,8 +48,8 @@ def benjamini_hochberg(p_values, alpha=0.05):
 #:ArrayLike[int]
 def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
                         number_neighborhoods=1000, number_neighbors_to_sample_from=50, threshold_degree=22.5,
-                        null_distribution='neighbors', correction='benjamini–hochberg', cosine_empty_neighborhood=2,
-                        seed=0):
+                        null_distribution='neighbors', correction='benjamini–hochberg', alpha=0.05,
+                        cosine_empty_neighborhood=2, seed=0):
     """
     Samples random neighborhoods for every cell and uses the high-dimensional cosine similarity between
     the velocity of each cell and the cells in the direction of the velocity (in 2D) as test statistic.
@@ -67,6 +67,7 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     :param null_distribution: 'neighbors' or 'velocities'. If 'neighbors', the neighborhoods are uniformly sampled from the neighbors.
         If 'velocities', random velocities are sampled and then the neighborhoods are defined by the neighbors in this direction.
     :param correction: correction method for multiple testing. 'benjamini–hochberg' or None
+    :param alpha: significance level used for Benjamini-Hochberg correction.
     :param cosine_empty_neighborhood: See `mean_cos_directionality_varying_neighbors`.
     :param seed: Random seed for reproducibility.
     :return:
@@ -157,7 +158,7 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     else:
         p_values_ = p_values_list(test_statistics_velocity, test_statistics_random).numpy()
     if correction == 'benjamini–hochberg':
-        h0_rejected = benjamini_hochberg(p_values_)
+        h0_rejected = benjamini_hochberg(p_values_, alpha)
     elif correction is None:
         h0_rejected = None
     else:
