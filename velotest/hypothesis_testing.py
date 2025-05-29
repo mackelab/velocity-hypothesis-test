@@ -176,7 +176,11 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         test_statistics_velocity = test_statistics_velocity.numpy()
     if isinstance(test_statistics_random, torch.Tensor):
         test_statistics_random = test_statistics_random.numpy()
-    return p_values_all, h0_rejected_all, test_statistics_velocity, test_statistics_random, neighborhoods
+
+    if null_distribution == 'neighbors':
+        return p_values_all, h0_rejected_all, test_statistics_velocity, test_statistics_random, neighborhoods
+    elif null_distribution == 'velocities':
+        return p_values_all, h0_rejected_all, test_statistics_velocity, test_statistics_random, neighborhoods, Z_velo_position_random
 
 
 def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', **kwargs):
