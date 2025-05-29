@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import torch
 
@@ -49,7 +51,7 @@ def benjamini_hochberg(p_values, alpha=0.05):
 def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
                         number_neighborhoods=1000, number_neighbors_to_sample_from=50, threshold_degree=22.5,
                         null_distribution='neighbors', correction='benjamini–hochberg', alpha=0.05,
-                        cosine_empty_neighborhood=2, seed=0):
+                        cosine_empty_neighborhood=2, pca_components: Optional[int] = None, seed=0):
     """
     Samples random neighborhoods for every cell and uses the high-dimensional cosine similarity between
     the velocity of each cell and the cells in the direction of the velocity (in 2D) as test statistic.
@@ -69,6 +71,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     :param correction: correction method for multiple testing. 'benjamini–hochberg' or None
     :param alpha: significance level used for Benjamini-Hochberg correction.
     :param cosine_empty_neighborhood: See `mean_cos_directionality_varying_neighbors`.
+    :param pca_components: If not None, the high d expression and velocity vectors are reduced to
+        the first `pca_components` principal components when computing the cosine similarity.
     :param seed: Random seed for reproducibility.
     :return:
         - ``p_values_`` (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
@@ -144,7 +148,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
                                                                     X_velo_vector,
                                                                     neighborhoods,
                                                                     non_empty_neighborhoods_indices,
-                                                                    cosine_empty_neighborhood)
+                                                                    cosine_empty_neighborhood,
+                                                                    pca_components)
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
     if cosine_empty_neighborhood is not None:
