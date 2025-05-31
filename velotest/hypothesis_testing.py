@@ -50,8 +50,9 @@ def benjamini_hochberg(p_values, alpha=0.05):
 #:ArrayLike[int]
 def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
                         number_neighborhoods=1000, number_neighbors_to_sample_from=50, threshold_degree=22.5,
-                        null_distribution='neighbors', correction='benjamini–hochberg', alpha=0.05,
-                        cosine_empty_neighborhood=2, pca_components: Optional[int] = None, seed=0):
+                        exclusion_degree: Optional[float] = None, null_distribution='neighbors',
+                        correction='benjamini–hochberg', alpha=0.05, cosine_empty_neighborhood=2,
+                        pca_components: Optional[int] = None, seed=0):
     """
     Samples random neighborhoods for every cell and uses the high-dimensional cosine similarity between
     the velocity of each cell and the cells in the direction of the velocity (in 2D) as test statistic.
@@ -65,6 +66,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         to look for neighbors in direction of velocity
     :param threshold_degree: angle in degrees to define the cone around the velocity vector
         (angle of cone is 2*threshold_degree),
+    :param exclusion_degree: angle in degrees to exclude random velocities which are too similar to
+        the visualized velocity. 'None' uses all random velocities.
     :param batch_size: batch size for computing cosine similarity
     :param null_distribution: 'neighbors' or 'velocities'. If 'neighbors', the neighborhoods are uniformly sampled from the neighbors.
         If 'velocities', random velocities are sampled and then the neighborhoods are defined by the neighbors in this direction.
@@ -106,6 +109,7 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
 
     np.random.seed(seed)
 
+    debug_dict = {}
     number_neighbors_per_velocity_neighborhood = [len(neighborhood) for neighborhood in
                                                   neighbors_in_direction_of_velocity]
     if null_distribution == 'neighbors':
@@ -128,11 +132,29 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         x = torch.cos(angle)
         y = torch.sin(angle)
         Z_velo_position_random = Z_expr + torch.concatenate((x, y), dim=-1)
+        debug_dict['Z_velo_position_random'] = Z_velo_position_random.numpy()
+
+        if exclusion_degree is not None:
+            Z_velo_normalized = (Z_velo_position - Z_expr) / (Z_velo_position - Z_expr).norm(dim=1, keepdim=True)
+            theta = torch.atan2(Z_velo_normalized[:, 1], Z_velo_normalized[:, 0])
+            theta[theta < 0] += 2 * torch.pi
+
+            #TODO: We don't properly "wrap around" right now
+            mask_not_excluded = (torch.logical_or(angle.squeeze() < theta - np.deg2rad(exclusion_degree),
+                                                  angle.squeeze() > theta + np.deg2rad(exclusion_degree)))
+            mask_not_excluded = mask_not_excluded.T
+            debug_dict['mask_not_excluded'] = mask_not_excluded
 
         neighborhoods_random_velocities = find_neighbors_in_direction_of_velocity_multiple(Z_expr,
                                                                                            Z_velo_position_random,
                                                                                            nn_indices,
                                                                                            threshold_degree)
+        if exclusion_degree is not None:
+            # Select neighborhoods based on mask_not_excluded
+            neighborhoods_random_velocities = [[neighborhoods_one_cell[i] for i in np.where(mask_one_cell)[0]] for
+                                               mask_one_cell, neighborhoods_one_cell in
+                                               zip(mask_not_excluded, neighborhoods_random_velocities)]
+
         # Remove empty neighborhoods
         neighborhoods_random_velocities = [neighborhoods_random_velocities[cell] for cell in
                                            non_empty_neighborhoods_indices]
@@ -152,6 +174,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
                                                                     pca_components)
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
+    debug_dict['neighborhoods'] = neighborhoods
+
     if cosine_empty_neighborhood is not None:
         test_statistics_velocity = test_statistics[:, 0]
         test_statistics_random = test_statistics[:, 1:]
@@ -182,10 +206,11 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     if isinstance(test_statistics_random, torch.Tensor):
         test_statistics_random = test_statistics_random.numpy()
 
-    if null_distribution == 'neighbors':
-        return p_values_all, h0_rejected_all, test_statistics_velocity, test_statistics_random, neighborhoods
-    elif null_distribution == 'velocities':
-        return p_values_all, h0_rejected_all, test_statistics_velocity, test_statistics_random, neighborhoods, Z_velo_position_random
+    debug_dict['test_statistics_velocity'] = test_statistics_velocity
+    debug_dict['test_statistics_random'] = test_statistics_random
+
+    # TODO: Probably want to switch number_neighborhoods and number_cells dimensions of Z_velo_position_random
+    return p_values_all, h0_rejected_all, debug_dict
 
 
 def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', **kwargs):
