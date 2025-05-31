@@ -98,6 +98,13 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     number_cells = X_expr.shape[0]
 
     nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
+    # import matplotlib.pyplot as plt
+    # cell = 0
+    # plt.scatter(*Z_expr.T)
+    # plt.scatter(*Z_expr[cell].T, label="cell")
+    # plt.scatter(*Z_expr[nn_indices[cell]].T, label="neighbors")
+    # plt.legend()
+    # plt.show()
     neighbors_in_direction_of_velocity = find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices,
                                                                                  threshold_degree)
 
@@ -139,11 +146,31 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
             theta = torch.atan2(Z_velo_normalized[:, 1], Z_velo_normalized[:, 0])
             theta[theta < 0] += 2 * torch.pi
 
-            #TODO: We don't properly "wrap around" right now
-            mask_not_excluded = (torch.logical_or(angle.squeeze() < theta - np.deg2rad(exclusion_degree),
-                                                  angle.squeeze() > theta + np.deg2rad(exclusion_degree)))
+            mask_not_excluded = torch.logical_or(angle.squeeze() < theta - np.deg2rad(exclusion_degree),
+                                                 angle.squeeze() > theta + np.deg2rad(exclusion_degree))
             mask_not_excluded = mask_not_excluded.T
             debug_dict['mask_not_excluded'] = mask_not_excluded
+
+        # assert Z_expr_repeated.shape == Z_velo_position_random.shape
+        #
+        # example_cell = 2854
+        # converted_cell = torch.where(torch.tensor(non_empty_neighborhoods_indices) == example_cell)[0]
+        # import matplotlib.pyplot as plt
+        # plt.scatter(*Z_expr.T)
+        # plt.scatter(*Z_expr[nn_indices[example_cell]].T, label="neighbors")
+        # plt.scatter(*Z_velo_position_random[
+        #              example_cell * number_neighborhoods:(example_cell + 1) * number_neighborhoods].T,
+        #             label="random velocity")
+        # plt.scatter(*Z_expr[example_cell].T, label="cell")
+        # plt.legend()
+        # plt.show()
+        #
+        # for i in range(5):
+        #     plt.scatter(*Z_expr.T)
+        #     plt.scatter(*Z_expr[example_cell+i].T, label=f"cell {example_cell+i}")
+        #     plt.scatter(*Z_velo_position_random[:, example_cell+i].T, label="random velocity")
+        #     plt.legend()
+        #     plt.show()
 
         neighborhoods_random_velocities = find_neighbors_in_direction_of_velocity_multiple(Z_expr,
                                                                                            Z_velo_position_random,
@@ -158,6 +185,15 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         # Remove empty neighborhoods
         neighborhoods_random_velocities = [neighborhoods_random_velocities[cell] for cell in
                                            non_empty_neighborhoods_indices]
+
+        # for i in range(5):
+        #     plt.scatter(*Z_expr.T)
+        #     plt.scatter(*Z_expr[neighborhoods_random_velocities[converted_cell][i]].T, label=f"neighborhood {i}")
+        #     plt.scatter(*Z_velo_position_random[i, example_cell].T, label="random velocity")
+        #     plt.scatter(*Z_expr[example_cell].T, label="cell")
+        #     plt.legend()
+        #     plt.show()
+
         # Merge neighborhoods (from velocity and random)
         # (list, list, Tensor)
         neighborhoods = []
