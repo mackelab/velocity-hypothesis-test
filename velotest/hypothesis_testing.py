@@ -71,8 +71,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     :param batch_size: batch size for computing cosine similarity
     :param null_distribution: 'neighbors' or 'velocities'. If 'neighbors', the neighborhoods are uniformly sampled from the neighbors.
         If 'velocities', random velocities are sampled and then the neighborhoods are defined by the neighbors in this direction.
-    :param correction: correction method for multiple testing. 'benjamini–hochberg' or None
-    :param alpha: significance level used for Benjamini-Hochberg correction.
+    :param correction: correction method for multiple testing. 'benjamini–hochberg', 'bonferroni' or None
+    :param alpha: significance level used for Benjamini-Hochberg or Bonferroni correction.
     :param cosine_empty_neighborhood: See `mean_cos_directionality_varying_neighbors`.
     :param pca_components: If not None, the high d expression and velocity vectors are reduced to
         the first `pca_components` principal components when computing the cosine similarity.
@@ -224,6 +224,8 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         p_values_ = p_values_list(test_statistics_velocity, test_statistics_random).numpy()
     if correction == 'benjamini–hochberg':
         h0_rejected = benjamini_hochberg(p_values_, alpha)
+    elif correction == 'bonferroni':
+        h0_rejected = p_values_ < alpha / len(p_values_)
     elif correction is None:
         h0_rejected = None
     else:
