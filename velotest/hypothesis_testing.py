@@ -2,6 +2,7 @@ from typing import Optional
 
 import numpy as np
 import torch
+from scipy.stats import false_discovery_control
 
 from velotest.neighbors import find_neighbors, find_neighbors_in_direction_of_velocity, \
     find_neighbors_in_direction_of_velocity_multiple
@@ -36,15 +37,7 @@ def benjamini_hochberg(p_values, alpha=0.05):
     :param alpha: significance level
     :return:
     """
-    sorted_p_values = np.sort(p_values)
-    m = len(p_values)
-    h0_rejected = np.zeros(m, dtype=bool)
-    for i in range(m):
-        if sorted_p_values[i] <= (i + 1) / m * alpha:
-            h0_rejected[i] = True
-        else:
-            break
-    return h0_rejected[p_values.argsort()]
+    return false_discovery_control(p_values) < alpha
 
 
 #:ArrayLike[int]
