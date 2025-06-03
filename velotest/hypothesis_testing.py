@@ -29,23 +29,43 @@ def p_values_list(test_statistics_velocity, test_statistics_random):
          observed_statistic, set_of_random_statistics in zip(test_statistics_velocity, test_statistics_random)])
 
 
-def benjamini_hochberg(p_values, alpha=0.05):
-    """
-    Apply Benjamini-Hochberg correction for multiple testing.
+def correct_for_multiple_testing(pvals, correction):
+    if correction is None:
+        return pvals
 
-    :param p_values: (#cells)
-    :param alpha: significance level
-    :return:
-    """
-    return false_discovery_control(p_values) < alpha
+    elif correction == 'benjamini–hochberg':
+        return false_discovery_control(pvals)
+
+    elif correction == 'bonferroni':
+        n_tests = len(pvals)
+        pvals_corrected = pvals * n_tests
+        np.clip(pvals_corrected, a_max=1, out=pvals_corrected)
+        return pvals_corrected
+
+    else:
+        raise ValueError(
+            f"Unknown correction method: '{correction}'. Supported methods "
+            f"include 'benjamini–hochberg', 'bonferroni', and None."
+        )
 
 
 #:ArrayLike[int]
-def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
-                        number_neighborhoods=1000, number_neighbors_to_sample_from=50, threshold_degree=22.5,
-                        exclusion_degree: Optional[float] = None, null_distribution='neighbors',
-                        correction='benjamini–hochberg', alpha=0.05, cosine_empty_neighborhood=2,
-                        pca_components: Optional[int] = None, seed=0):
+def run_hypothesis_test(
+    X_expr,
+    X_velo_vector,
+    Z_expr,
+    Z_velo_position,
+    number_neighborhoods=1000,
+    number_neighbors_to_sample_from=50,
+    threshold_degree=22.5,
+    exclusion_degree: Optional[float] = None,
+    null_distribution='neighbors',
+    correction='benjamini–hochberg',
+    alpha=0.05,
+    cosine_empty_neighborhood=2,
+    pca_components: Optional[int] = None,
+    seed=0,
+):
     """
     Samples random neighborhoods for every cell and uses the high-dimensional cosine similarity between
     the velocity of each cell and the cells in the direction of the velocity (in 2D) as test statistic.
@@ -61,7 +81,6 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         (angle of cone is 2*threshold_degree),
     :param exclusion_degree: angle in degrees to exclude random velocities which are too similar to
         the visualized velocity. 'None' uses all random velocities.
-    :param batch_size: batch size for computing cosine similarity
     :param null_distribution: 'neighbors' or 'velocities'. If 'neighbors', the neighborhoods are uniformly sampled from the neighbors.
         If 'velocities', random velocities are sampled and then the neighborhoods are defined by the neighbors in this direction.
     :param correction: correction method for multiple testing. 'benjamini–hochberg', 'bonferroni' or None
@@ -91,13 +110,6 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
     number_cells = X_expr.shape[0]
 
     nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
-    # import matplotlib.pyplot as plt
-    # cell = 0
-    # plt.scatter(*Z_expr.T)
-    # plt.scatter(*Z_expr[cell].T, label="cell")
-    # plt.scatter(*Z_expr[nn_indices[cell]].T, label="neighbors")
-    # plt.legend()
-    # plt.show()
     neighbors_in_direction_of_velocity = find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices,
                                                                                  threshold_degree)
 
@@ -144,27 +156,6 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
             mask_not_excluded = mask_not_excluded.T
             debug_dict['mask_not_excluded'] = mask_not_excluded
 
-        # assert Z_expr_repeated.shape == Z_velo_position_random.shape
-        #
-        # example_cell = 2854
-        # converted_cell = torch.where(torch.tensor(non_empty_neighborhoods_indices) == example_cell)[0]
-        # import matplotlib.pyplot as plt
-        # plt.scatter(*Z_expr.T)
-        # plt.scatter(*Z_expr[nn_indices[example_cell]].T, label="neighbors")
-        # plt.scatter(*Z_velo_position_random[
-        #              example_cell * number_neighborhoods:(example_cell + 1) * number_neighborhoods].T,
-        #             label="random velocity")
-        # plt.scatter(*Z_expr[example_cell].T, label="cell")
-        # plt.legend()
-        # plt.show()
-        #
-        # for i in range(5):
-        #     plt.scatter(*Z_expr.T)
-        #     plt.scatter(*Z_expr[example_cell+i].T, label=f"cell {example_cell+i}")
-        #     plt.scatter(*Z_velo_position_random[:, example_cell+i].T, label="random velocity")
-        #     plt.legend()
-        #     plt.show()
-
         neighborhoods_random_velocities = find_neighbors_in_direction_of_velocity_multiple(Z_expr,
                                                                                            Z_velo_position_random,
                                                                                            nn_indices,
@@ -178,14 +169,6 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         # Remove empty neighborhoods
         neighborhoods_random_velocities = [neighborhoods_random_velocities[cell] for cell in
                                            non_empty_neighborhoods_indices]
-
-        # for i in range(5):
-        #     plt.scatter(*Z_expr.T)
-        #     plt.scatter(*Z_expr[neighborhoods_random_velocities[converted_cell][i]].T, label=f"neighborhood {i}")
-        #     plt.scatter(*Z_velo_position_random[i, example_cell].T, label="random velocity")
-        #     plt.scatter(*Z_expr[example_cell].T, label="cell")
-        #     plt.legend()
-        #     plt.show()
 
         # Merge neighborhoods (from velocity and random)
         # (list, list, Tensor)
@@ -215,14 +198,9 @@ def run_hypothesis_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
         p_values_ = p_values(test_statistics_velocity, test_statistics_random).numpy()
     else:
         p_values_ = p_values_list(test_statistics_velocity, test_statistics_random).numpy()
-    if correction == 'benjamini–hochberg':
-        h0_rejected = benjamini_hochberg(p_values_, alpha)
-    elif correction == 'bonferroni':
-        h0_rejected = p_values_ < alpha / len(p_values_)
-    elif correction is None:
-        h0_rejected = None
-    else:
-        raise ValueError(f"Unknown correction method: {correction}. Use 'benjamini–hochberg' or None.")
+
+    pvals_corrected = correct_for_multiple_testing(p_values_, correction)
+    h0_rejected = pvals_corrected < alpha
 
     p_values_all = 2 * np.ones(number_cells)
     p_values_all[non_empty_neighborhoods_bool] = p_values_
