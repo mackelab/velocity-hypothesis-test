@@ -19,7 +19,7 @@ def cos_directionality(expression, velocity_position, expressions_neighbours):
 
 
 # Batched version of 'cos_directionality' which can be used on a batch of cells, their velocity vectors and their neighbors
-cos_directionality_batched = torch.vmap(cos_directionality)
+cos_directionality_batched = torch.vmap(cos_directionality, chunk_size=100)
 
 
 def find_neighbors(x, k_neighbors=5, metric="euclidean"):
@@ -61,7 +61,7 @@ def select_neighbors_based_on_cos(Z_expr, Z_velo_position, nn_indices, threshold
     return selected_neighbours
 
 
-select_neighbors_based_on_cos_batched = torch.vmap(select_neighbors_based_on_cos, in_dims=(None, 0, None, None))
+select_neighbors_based_on_cos_batched = torch.vmap(select_neighbors_based_on_cos, in_dims=(None, 0, None, None), chunk_size=100)
 
 
 def find_neighbors_in_direction_of_velocity_multiple(Z_expr, Z_velo_position, nn_indices,
