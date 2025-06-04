@@ -1,7 +1,6 @@
 from typing import Optional
 
 import torch
-from sklearn.decomposition import PCA
 from tqdm import tqdm
 
 
@@ -72,8 +71,7 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
                                               velocity_vector: torch.Tensor,
                                               neighborhoods: list,
                                               original_indices_cells,
-                                              cosine_empty_neighborhood: Optional[float] = 2,
-                                              pca_components: Optional[int] = None):
+                                              cosine_empty_neighborhood: Optional[float] = 2):
     """
     Mean cos directionality for a varying number of neighbors in the neighborhoods across cells:
     Calculates the cosine similarity between the velocity of a cell and multiple sets of other cells
@@ -87,23 +85,10 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
         Standard is 2 which is higher then the max of the cosine similarity and will therefore lead to more cells
         where we cannot reject the null hypothesis (Type II error). -2 would lead to Type I errors.
         "None" will ignore empty neighborhoods and then return a variable number of mean cosine similarities per cell.
-    :param pca_components: number of PCA components used to reduce dimensionality of expression and velocity vectors
     :return:
     """
     number_cells = len(neighborhoods)
     number_neighborhoods = len(neighborhoods[0])
-
-    if pca_components is not None:
-        pca = PCA(n_components=pca_components)
-        # TODO: Should we compute PCA on expression and velocity_vector jointly?
-        #pca.fit(torch.concatenate([expression, expression+velocity_vector], dim=0)) # Does it assume linearity?
-        pca.fit(expression)
-        expression = pca.transform(expression)
-        velocity_vector = pca.transform(velocity_vector)
-
-        expression = torch.tensor(expression)
-        velocity_vector = torch.tensor(velocity_vector)
-
     if cosine_empty_neighborhood is not None:
         mean_cos_neighborhoods = torch.zeros((number_cells, number_neighborhoods))
     else:

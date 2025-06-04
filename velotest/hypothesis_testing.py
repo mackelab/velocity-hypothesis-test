@@ -63,7 +63,6 @@ def run_hypothesis_test(
     correction='benjamini–hochberg',
     alpha=0.05,
     cosine_empty_neighborhood=2,
-    pca_components: Optional[int] = None,
     seed=0,
 ):
     """
@@ -86,8 +85,6 @@ def run_hypothesis_test(
     :param correction: correction method for multiple testing. 'benjamini–hochberg', 'bonferroni' or None
     :param alpha: significance level used for Benjamini-Hochberg or Bonferroni correction.
     :param cosine_empty_neighborhood: See `mean_cos_directionality_varying_neighbors`.
-    :param pca_components: If not None, the high d expression and velocity vectors are reduced to
-        the first `pca_components` principal components when computing the cosine similarity.
     :param seed: Random seed for reproducibility.
     :return:
         - ``p_values_`` (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
@@ -182,8 +179,7 @@ def run_hypothesis_test(
                                                                     X_velo_vector,
                                                                     neighborhoods,
                                                                     non_empty_neighborhoods_indices,
-                                                                    cosine_empty_neighborhood,
-                                                                    pca_components)
+                                                                    cosine_empty_neighborhood)
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
     debug_dict['neighborhoods'] = neighborhoods
