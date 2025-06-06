@@ -39,7 +39,7 @@ def correct_for_multiple_testing(pvals, correction):
     elif correction == 'bonferroni':
         n_tests = len(pvals)
         pvals_corrected = pvals * n_tests
-        np.clip(pvals_corrected, a_max=1, out=pvals_corrected)
+        np.clip(pvals_corrected, a_min=None, a_max=1, out=pvals_corrected)
         return pvals_corrected
 
     else:
