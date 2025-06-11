@@ -98,12 +98,10 @@ def mean_cos_directionality_varying_neighborhoods_same_neighbors(
     return mean_cos_neighborhoods
 
 
-
 def mean_cos_directionality_varying_neighbors(
     expression: torch.Tensor,
     velocity_vector: torch.Tensor,
     neighborhoods: dict,
-    cosine_empty_neighborhood: Optional[float] = 2,
 ):
     """
     Mean cos directionality for a varying number of neighbors in the neighborhoods across cells:
@@ -115,14 +113,6 @@ def mean_cos_directionality_varying_neighbors(
     :param neighborhoods: Neighborhoods of selected cells. list of length #cells with lists of varying #neighbors.
     :return:
     """
-    # number_cells = len(neighborhoods)
-    # number_neighborhoods = len(neighborhoods[next(iter(neighborhoods))])
-    #
-    # if cosine_empty_neighborhood is not None:
-    #     mean_cos_neighborhoods = torch.zeros((number_cells, number_neighborhoods))
-    # else:
-    #     mean_cos_neighborhoods = []
-
     mean_cos_neighborhoods = {}
 
     for cell_idx in tqdm(neighborhoods):

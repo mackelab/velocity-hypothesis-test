@@ -34,14 +34,6 @@ def pvals_from_permutation_test(true_statistic, random_statistics):
         return np.mean(random_statistics >= true_statistic[:, None], axis=1)
 
 
-# def p_values_list(test_statistics_velocity, test_statistics_random):
-#     # test_statistics_velocity, test_statistics_random = test_statistics_velocity.numpy(), test_statistics_random.numpy()
-#     return [
-#         np.mean(set_of_random_statistics >= observed_statistic)
-#         for observed_statistic, set_of_random_statistics in zip(test_statistics_velocity, test_statistics_random)
-#     ]
-
-
 def correct_for_multiple_tests(pvals, correction="bonferroni"):
     if correction is None:
         return pvals
@@ -186,7 +178,7 @@ def run_hypothesis_test(
 
             # Compute velocity vector angles
             theta = np.atan2(Z_velo_normalized[:, 1], Z_velo_normalized[:, 0])
-            theta[theta < 0] += 2 * torch.pi
+            theta[theta < 0] += 2 * np.pi
 
             inclusion_mask = np.logical_or(
                 random_angles < theta - np.deg2rad(exclusion_degree),
@@ -218,7 +210,7 @@ def run_hypothesis_test(
             concat_neighborhoods_[cell_idx] = merged_neighborhoods_cell
 
         test_statistics = mean_cos_directionality_varying_neighbors(
-            X_expr, X_velo_vector, concat_neighborhoods_, cosine_empty_neighborhood
+            X_expr, X_velo_vector, concat_neighborhoods_
         )
         test_statistics = pd.DataFrame.from_dict(test_statistics, orient="index")
 
