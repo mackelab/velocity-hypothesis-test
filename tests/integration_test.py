@@ -20,10 +20,13 @@ def test_run_hypothesis_test_on_pancreas(null_distribution, cosine_empty_neighbo
     scvelo.tl.velocity_embedding(adata)
 
     # Run test
-    uncorrected_p_values, h0_rejected, _ = run_hypothesis_test_on(adata, number_neighborhoods=100,
-                                                                  number_neighbors_to_sample_from=20,
-                                                                  null_distribution=null_distribution,
-                                                                  cosine_empty_neighborhood=cosine_empty_neighborhood)
+    uncorrected_p_values, h0_rejected, _ = run_hypothesis_test_on(
+        adata,
+        number_neighborhoods=100,
+        number_neighbors_to_sample_from=20,
+        null_distribution=null_distribution,
+        cosine_empty_neighborhood=cosine_empty_neighborhood,
+    )
     assert uncorrected_p_values.shape[0] == adata.n_obs
     assert h0_rejected.shape[0] == adata.n_obs
     if null_distribution == 'neighbors':

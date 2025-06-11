@@ -1,7 +1,8 @@
 import torch
+import numpy as np
 import scvelo
 
-from velotest.test_statistic import (cos_directionality_one_cell_batch_same_neighbors, \
+from velotest.test_statistic import (cos_directionality_one_cell_batch_same_neighbors,
                                      cos_directionality_one_cell_one_neighborhood,
                                      mean_cos_directionality_varying_neighbors,
                                      mean_cos_directionality_varying_neighborhoods_same_neighbors)
@@ -27,21 +28,10 @@ def test_mean_cos_directionality_varying_neighbors():
     expression = torch.tensor([[0, 0, 0.], [0, 1, 0.], [-1, 0, 0.]])
     velocity_vector = torch.tensor([[1, 0, 0.], [0, 1, 0.], [1, 0, 0.]])
     neighborhoods = [[[], []], [[], []], [[0], [0]]]
-    original_indices_cells = [0, 1, 2]
-    mean_cos = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods,
-                                                         original_indices_cells)
-    assert torch.allclose(mean_cos, torch.tensor([[2, 2], [2, 2], [1, 1.]]), atol=1e-6)
-
-
-def test_mean_cos_directionality_varying_neighbors_ignore_empty():
-    expression = torch.tensor([[0, 0, 0.], [0, 1, 0.], [-1, 0, 0.]])
-    velocity_vector = torch.tensor([[1, 0, 0.], [0, 1, 0.], [1, 0, 0.]])
-    neighborhoods = [[[], []], [[], []], [[0], [0]]]
-    original_indices_cells = [0, 1, 2]
-    mean_cos = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods,
-                                                         original_indices_cells, cosine_empty_neighborhood=None)
-    for cos, correct in zip(mean_cos, [torch.tensor([]), torch.tensor([]), torch.tensor([1, 1.])]):
-        assert torch.allclose(cos, correct, atol=1e-6)
+    neighborhoods = dict(enumerate(neighborhoods))
+    mean_cos = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods)
+    mean_cos = torch.tensor(list(mean_cos.values())).float()
+    assert torch.allclose(mean_cos, torch.tensor([[np.nan, np.nan], [np.nan, np.nan], [1., 1.]]), atol=1e-6, equal_nan=True)
 
 
 def test_same_results():
@@ -55,14 +45,18 @@ def test_same_results():
 
     expression = torch.tensor(adata.layers['Ms'])
     velocity_vector = torch.tensor(adata.layers['velocity'])
-    original_indices_cells = list(range(50))
 
     neighborhoods_same = [torch.tensor([list(range(25)), list(range(25, 50))]) for _ in range(50)]
     neighborhoods_varying = [[torch.tensor(list(range(25))), torch.tensor(list(range(25, 50)))] for _ in range(50)]
 
-    result_same_neighbors = mean_cos_directionality_varying_neighborhoods_same_neighbors(expression, velocity_vector,
-                                                                                         neighborhoods_same,
-                                                                                         original_indices_cells)
-    result_varying_neighbors = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods_varying,
-                                                                         original_indices_cells)
-    assert torch.allclose(result_same_neighbors.flatten(), result_varying_neighbors.flatten(), atol=1e-6)
+    result_same_neighbors = mean_cos_directionality_varying_neighborhoods_same_neighbors(
+        expression, velocity_vector, dict(enumerate(neighborhoods_same))
+    )
+    result_same_neighbors = torch.tensor(list(result_same_neighbors.values())).float()
+
+    result_varying_neighbors = mean_cos_directionality_varying_neighbors(
+        expression, velocity_vector, dict(enumerate(neighborhoods_varying))
+    )
+    result_varying_neighbors = torch.tensor(list(result_varying_neighbors.values())).float()
+
+    assert torch.allclose(result_same_neighbors, result_varying_neighbors, atol=1e-6)

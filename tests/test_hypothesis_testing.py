@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from velotest.hypothesis_testing import pvals_from_permutation_test, p_values_list
+from velotest.hypothesis_testing import pvals_from_permutation_test
 
 
 def test_p_values_same_results():
@@ -15,5 +15,5 @@ def test_p_values_same_results():
                                    for neighborhood in test_statistics_random]
 
     assert np.allclose(pvals_from_permutation_test(test_statistics_velocity_tensor, test_statistics_random_tensor),
-                       p_values_list(test_statistics_velocity_list, test_statistics_random_list),
+                       pvals_from_permutation_test(test_statistics_velocity_list, test_statistics_random_list),
                        atol=1e-6)
