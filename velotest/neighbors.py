@@ -4,7 +4,7 @@ import torch
 from sklearn import neighbors
 
 
-def cos_directionality(expression, velocity_position, expressions_neighbours):
+def cos_similarity(expression, velocity_position, expressions_neighbours):
     """
     Calculates the cosine similarity between the velocity of a cell and multiple cells in the neighborhood of the cell.
     Currently used for 2D velocity vectors.
@@ -19,7 +19,7 @@ def cos_directionality(expression, velocity_position, expressions_neighbours):
 
 
 # Batched version of 'cos_directionality' which can be used on a batch of cells, their velocity vectors and their neighbors
-cos_directionality_batched = torch.vmap(cos_directionality, chunk_size=100)
+cos_similarity_batched = torch.vmap(cos_similarity, chunk_size=100)
 
 
 def find_neighbors(x, k_neighbors=5, metric="euclidean"):
@@ -55,7 +55,7 @@ def find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices,
 
 
 def select_neighbors_based_on_cos(Z_expr, Z_velo_position, nn_indices, threshold_degree):
-    neighbour_directionality = cos_directionality_batched(Z_expr, Z_velo_position, Z_expr[nn_indices])
+    neighbour_directionality = cos_similarity_batched(Z_expr, Z_velo_position, Z_expr[nn_indices])
     # this allows a derivation of 22.5° (a cone of 45° around velocity vector), 0.707 for 45° (cone of 90°)
     selected_neighbours = neighbour_directionality > math.cos(math.radians(threshold_degree))
     return selected_neighbours

@@ -4,3 +4,4 @@ velotest.egg-info/
 notebooks/data/
 tests/data/
 data/
+__pycache__/
