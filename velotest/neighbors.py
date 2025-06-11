@@ -64,8 +64,7 @@ def select_neighbors_based_on_cos(Z_expr, Z_velo_position, nn_indices, threshold
 select_neighbors_based_on_cos_batched = torch.vmap(select_neighbors_based_on_cos, in_dims=(None, 0, None, None), chunk_size=100)
 
 
-def find_neighbors_in_direction_of_velocity_multiple(Z_expr, Z_velo_position, nn_indices,
-                                                     threshold_degree=22.5) -> list:
+def find_neighbors_in_direction_of_velocity_multiple(Z_expr, Z_velo_position, nn_indices, threshold_degree=22.5) -> list:
     selected_neighbours = select_neighbors_based_on_cos_batched(Z_expr, Z_velo_position, nn_indices, threshold_degree)
     selected_neighbours = selected_neighbours.permute(1, 0, 2)
     neighbours_in_direction_of_velocity = [[nn_indices[i][neighbours] for neighbours in

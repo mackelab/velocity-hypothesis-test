@@ -101,7 +101,10 @@ def run_hypothesis_test(
         If 'velocities', random velocities are sampled and then the neighborhoods are defined by the neighbors in this direction.
     :param correction: correction method for multiple testing. 'benjamini–hochberg', 'bonferroni' or None
     :param alpha: significance level used for Benjamini-Hochberg or Bonferroni correction.
-    :param cosine_empty_neighborhood: See `mean_cos_directionality_varying_neighbors`.
+    :param cosine_empty_neighborhood: if the neighborhood is empty, assign this value to the mean cosine similarity.
+        Standard is 2 which is higher than the max of the cosine similarity and will therefore lead to more cells
+        where we cannot reject the null hypothesis (Type II error). -2 would lead to Type I errors.
+        "None" will ignore empty neighborhoods and then return a variable number of mean cosine similarities per cell.
     :param seed: Random seed for reproducibility.
     :return:
         - ``p_values_`` (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
@@ -125,120 +128,109 @@ def run_hypothesis_test(
 
     number_cells = X_expr.shape[0]
 
-    nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
-    neighbors_in_direction_of_velocity = find_neighbors_in_direction_of_velocity(
-        Z_expr, Z_velo_position, nn_indices, threshold_degree
+    all_neighbors = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
+    # Find only neighbors that appear in the direction of the velocity vector
+    velocity_neighborhoods = find_neighbors_in_direction_of_velocity(
+        Z_expr, Z_velo_position, all_neighbors, threshold_degree
     )
+    velocity_neighborhoods = dict(enumerate(velocity_neighborhoods))
 
-    neighbors_in_direction_of_velocity = dict(enumerate(neighbors_in_direction_of_velocity))
     # Some data points do not have any neighbors in the direction of the
     # velocity vector; we can't do much with these, so remove them
-    neighbors_in_direction_of_velocity = {
-        cell_idx: neighbors for cell_idx, neighbors in neighbors_in_direction_of_velocity.items()
+    velocity_neighborhoods = {
+        cell_idx: neighbors for cell_idx, neighbors in velocity_neighborhoods.items()
         if len(neighbors) > 0
     }
-
-    # TODO: This line needs to be removed
-    non_empty_neighborhoods_indices = np.array(list(neighbors_in_direction_of_velocity.keys()))
 
     debug_dict = {}
 
     if null_distribution == 'neighbors':
         # Generate random neighborhoods for each cell against which to compare
         # the neighborhood appearing in the direction of the velocity vector
-        neighborhoods_random = {
-            cell_idx: np.random.choice(nn_indices[cell_idx], size=(number_neighborhoods, len(neighbors)))
-            for cell_idx, neighbors in neighbors_in_direction_of_velocity.items()
+        random_neighborhoods = {
+            cell_idx: np.random.choice(all_neighbors[cell_idx], size=(number_neighborhoods, len(neighbors)))
+            for cell_idx, neighbors in velocity_neighborhoods.items()
         }
 
-        # This line prepends the true neighborhood to the random neighborhoods,
-        # so they all appear in the same list. The first entry is the true
-        # neighborhood
-        neighborhoods = {
+        # Prepend the true neighborhood to the random neighborhoods, so they
+        # all appear in the same list. The first entry is the true neighborhood
+        concat_neighborhoods_ = {
             cell_idx: np.concatenate(
-                [neighbors_in_direction_of_velocity[cell_idx][None, ...], neighborhoods_random[cell_idx]],
+                [velocity_neighborhoods[cell_idx][None, ...], random_neighborhoods[cell_idx]],
                 axis=0,
             )
-            for cell_idx in neighborhoods_random
+            for cell_idx in random_neighborhoods
         }
 
         test_statistics = mean_cos_directionality_varying_neighborhoods_same_neighbors(
-            X_expr, X_velo_vector, neighborhoods
+            X_expr, X_velo_vector, concat_neighborhoods_
         )
         test_statistics = pd.DataFrame.from_dict(test_statistics, orient="index")
-        # test_statistics_velocity = test_statistics[:, 0].numpy()
-        # test_statistics_random = test_statistics[:, 1:].numpy()
 
     elif null_distribution == 'velocities':
         # Sample number_neighborhoods random velocities on unit circle for each cell and add them to Z_expr
-        # uniform = torch.distributions.uniform.Uniform(torch.tensor([0.0]), torch.tensor([2.0]))
-        # angle = torch.pi * uniform.sample(sample_shape=(number_neighborhoods, number_cells,))
         random_angles = 2 * np.pi * np.random.uniform(0, 1, size=(number_neighborhoods, number_cells))
-        # Z_velo_position_random = Z_expr + torch.concatenate((x, y), dim=-1)
-        Z_velo_position_random = np.stack(
-            [np.cos(random_angles), np.sin(random_angles)], axis=-1
-        )
+        random_angle_vectors = np.stack([np.cos(random_angles), np.sin(random_angles)], axis=-1)
+        Z_velo_position_random = Z_expr + random_angle_vectors
 
         debug_dict['Z_velo_position_random'] = Z_velo_position_random
 
-        if exclusion_degree is not None:
-            Z_velo_normalized = (Z_velo_position - Z_expr) / (Z_velo_position - Z_expr).norm(dim=1, keepdim=True)
-            theta = torch.atan2(Z_velo_normalized[:, 1], Z_velo_normalized[:, 0])
-            theta[theta < 0] += 2 * torch.pi
-
-            mask_not_excluded = torch.logical_or(angle.squeeze() < theta - np.deg2rad(exclusion_degree),
-                                                 angle.squeeze() > theta + np.deg2rad(exclusion_degree))
-            mask_not_excluded = mask_not_excluded.T
-            debug_dict['mask_not_excluded'] = mask_not_excluded
-
         neighborhoods_random_velocities = find_neighbors_in_direction_of_velocity_multiple(
-            Z_expr, Z_velo_position_random, nn_indices, threshold_degree
+            Z_expr, torch.tensor(Z_velo_position_random), all_neighbors, threshold_degree
         )
         neighborhoods_random_velocities = dict(enumerate(neighborhoods_random_velocities))
 
         if exclusion_degree is not None:
-            # Select neighborhoods based on mask_not_excluded
-            neighborhoods_random_velocities = [[neighborhoods_one_cell[i] for i in np.where(mask_one_cell)[0]] for
-                                               mask_one_cell, neighborhoods_one_cell in
-                                               zip(mask_not_excluded, neighborhoods_random_velocities)]
+            Z_velo_normalized = (Z_velo_position - Z_expr) / (Z_velo_position - Z_expr).norm(dim=1, keepdim=True)
+            Z_velo_normalized = Z_velo_normalized.numpy()
 
-        # Remove empty neighborhoods
-        neighborhoods_random_velocities = [
-            neighborhoods_random_velocities[cell] for cell in non_empty_neighborhoods_indices
-        ]
+            # Compute velocity vector angles
+            theta = np.atan2(Z_velo_normalized[:, 1], Z_velo_normalized[:, 0])
+            theta[theta < 0] += 2 * torch.pi
 
-        # Merge neighborhoods (from velocity and random)
+            inclusion_mask = np.logical_or(
+                random_angles < theta - np.deg2rad(exclusion_degree),
+                random_angles > theta + np.deg2rad(exclusion_degree),
+            )
+            inclusion_mask = inclusion_mask.T
+            debug_dict['mask_not_excluded'] = inclusion_mask
+
+            # Select neighborhoods based on inclusion mask
+            neighborhoods_random_velocities = {
+                cell_idx: [neighborhoods_random_velocities[cell_idx][i] for i in np.where(mask_one_cell)[0]]
+                for mask_one_cell, cell_idx in zip(inclusion_mask, neighborhoods_random_velocities)
+            }
+
+        # Keep only random neighborhoods for the cells that have a non-empty
+        # real neighborhood
+        neighborhoods_random_velocities = {
+            cell_idx: neighborhoods_random_velocities[cell_idx]
+            for cell_idx in velocity_neighborhoods
+        }
+
+        # Prepend the true neighborhood to the random neighborhoods, so they
+        # all appear in the same list. The first entry is the true neighborhood
         # (list, list, Tensor)
-        neighborhoods = []
-        for neighbors_in_direction_of_velocity_cell, random_neighborhoods_cell in zip(
-                neighbors_in_direction_of_velocity, neighborhoods_random_velocities):
-            merged_neighborhoods_cell = [torch.tensor(neighbors_in_direction_of_velocity_cell)]
-            merged_neighborhoods_cell.extend(random_neighborhoods_cell)
-            neighborhoods.append(merged_neighborhoods_cell)
+        concat_neighborhoods_ = {}
+        for cell_idx in velocity_neighborhoods:
+            merged_neighborhoods_cell = [torch.tensor(velocity_neighborhoods[cell_idx])]
+            merged_neighborhoods_cell.extend(neighborhoods_random_velocities[cell_idx])
+            concat_neighborhoods_[cell_idx] = merged_neighborhoods_cell
 
         test_statistics = mean_cos_directionality_varying_neighbors(
-            X_expr, X_velo_vector, neighborhoods, non_empty_neighborhoods_indices, cosine_empty_neighborhood
+            X_expr, X_velo_vector, concat_neighborhoods_, cosine_empty_neighborhood
         )
+        test_statistics = pd.DataFrame.from_dict(test_statistics, orient="index")
 
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
 
-    debug_dict['neighborhoods'] = neighborhoods
-    #
-    # if cosine_empty_neighborhood is not None:
-    #     test_statistics_velocity = test_statistics[:, 0].numpy()
-    #     test_statistics_random = test_statistics[:, 1:].numpy()
-    # else:
-    #     test_statistics_velocity = [test_statistic[0] for test_statistic in test_statistics]
-    #     test_statistics_random = [test_statistic[1:] for test_statistic in test_statistics]
+    debug_dict['neighborhoods'] = concat_neighborhoods_
+
     test_statistics_velocity = test_statistics.iloc[:, 0]
     test_statistics_random = test_statistics.iloc[:, 1:]
 
-    # if cosine_empty_neighborhood is not None:
     pvals = pvals_from_permutation_test(test_statistics_velocity, test_statistics_random)
-    # else:
-    #     pvals = p_values_list(test_statistics_velocity, test_statistics_random)
-
     pvals_corrected = correct_for_multiple_tests(pvals, correction)
 
     # Ensure that we have results for all cells, not just the ones that we were
@@ -249,11 +241,11 @@ def run_hypothesis_test(
 
     h0_rejected = pvals_corrected < alpha
 
-    # p_values_all = 2 * np.ones(number_cells)
-    # p_values_all[non_empty_neighborhoods_bool] = pvals
-    #
-    # h0_rejected_all = np.zeros(number_cells, dtype=bool)
-    # h0_rejected_all[non_empty_neighborhoods_bool] = h0_rejected
+    # Because we are unable to test some certain number of cells, these cells
+    # are assigned a p-value of NA. However, we can also fill this with a
+    # user-specified value
+    if cosine_empty_neighborhood is not None:
+        pvals.fillna(cosine_empty_neighborhood, inplace=True)
 
     debug_dict['test_statistics_velocity'] = test_statistics_velocity
     debug_dict['test_statistics_random'] = test_statistics_random
