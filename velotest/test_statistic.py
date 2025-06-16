@@ -87,6 +87,10 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
         "None" will ignore empty neighborhoods and then return a variable number of mean cosine similarities per cell.
     :return:
     """
+    if torch.cuda.is_available():
+        expression = expression.cuda()
+        velocity_vector = velocity_vector.cuda()
+
     number_cells = len(neighborhoods)
     number_neighborhoods = len(neighborhoods[0])
     if cosine_empty_neighborhood is not None:
