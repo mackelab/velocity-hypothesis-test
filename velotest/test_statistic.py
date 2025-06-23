@@ -109,6 +109,8 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
                     cos_directionality_one_cell_one_neighborhood(expression[original_index],
                                                                  velocity_vector[original_index],
                                                                  expression[neighborhood]))
+                assert not torch.isnan(mean_cos_directionality_one_cell_one_neighborhood), \
+                    "Something went wrong and some of the test statistics are NaN. This shouldn't happen."
                 if cosine_empty_neighborhood is not None:
                     mean_cos_neighborhoods[cell, neighborhood_id] = mean_cos_directionality_one_cell_one_neighborhood
                 else:

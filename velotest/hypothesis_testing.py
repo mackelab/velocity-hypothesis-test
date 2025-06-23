@@ -104,6 +104,15 @@ def run_hypothesis_test(
     if not isinstance(Z_velo_position, torch.Tensor):
         Z_velo_position = torch.tensor(Z_velo_position)
 
+    assert not (torch.isnan(X_expr).any()), ("X_expr contains NaN values. "
+                                             "Please remove them before running the test.")
+    assert not (torch.isnan(X_velo_vector).any()), ("X_velo_vector contains NaN values. "
+                                                    "Please remove them before running the test.")
+    assert not (torch.isnan(Z_expr).any()), ("Z_expr contains NaN values. "
+                                             "Please remove them before running the test.")
+    assert not (torch.isnan(Z_velo_position).any()), ("Z_velo_position contains NaN values. "
+                                                      "Please remove them before running the test.")
+
     number_cells = X_expr.shape[0]
 
     nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
