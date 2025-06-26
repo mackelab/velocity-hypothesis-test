@@ -227,7 +227,7 @@ def run_hypothesis_test(
     return p_values_all, h0_rejected_all, debug_dict
 
 
-def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', **kwargs):
+def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', restrict_to_velocity_genes=False, **kwargs):
     """
     Runs the hypothesis test using high dimensional expressions, high dimensional velocity,
     and the embeddings from an adata object. For details, see `run_hypothesis_test`.
@@ -236,11 +236,17 @@ def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', **kw
     :param ekey: Name of layer in adata object containing high dimensional expression data.
     :param vkey: Name of layer in adata object containing high dimensional velocity data.
     :param basis: Name of embedding.
+    :param restrict_to_velocity_genes: Only use velocity genes determined by the velocity estimation method
+        for any high-dimensional computations, specifically cosine similarity.
     :param kwargs: Additional arguments for `run_hypothesis_test`.
     :return: See `run_hypothesis_test`.
     """
     X_expr = adata.layers[ekey]
     X_velo_vector = adata.layers[vkey]
+    if restrict_to_velocity_genes:
+        print(f"Dropping all the genes which are not velocity genes. {np.sum(adata.var.velocity_genes)} genes left.")
+        X_expr = X_expr[:, adata.var.velocity_genes]
+        X_velo_vector = X_velo_vector[:, adata.var.velocity_genes]
     Z_expr = adata.obsm[f"X_{basis}"]
     Z_velo_position = Z_expr + adata.obsm[f'velocity_{basis}']
 
