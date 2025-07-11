@@ -184,11 +184,12 @@ def run_hypothesis_test(
             merged_neighborhoods_cell = [torch.tensor(neighbors_in_direction_of_velocity_cell)]
             merged_neighborhoods_cell.extend(random_neighborhoods_cell)
             neighborhoods.append(merged_neighborhoods_cell)
-        test_statistics = mean_cos_directionality_varying_neighbors(X_expr,
-                                                                    X_velo_vector,
-                                                                    neighborhoods,
-                                                                    non_empty_neighborhoods_indices,
-                                                                    cosine_empty_neighborhood)
+        test_statistics, used_neighborhoods = mean_cos_directionality_varying_neighbors(X_expr,
+                                                                                        X_velo_vector,
+                                                                                        neighborhoods,
+                                                                                        non_empty_neighborhoods_indices,
+                                                                                        cosine_empty_neighborhood)
+        debug_dict['used_neighborhoods'] = used_neighborhoods
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
     debug_dict['neighborhoods'] = neighborhoods

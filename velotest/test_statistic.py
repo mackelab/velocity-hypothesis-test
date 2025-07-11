@@ -95,8 +95,10 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
     number_neighborhoods = len(neighborhoods[0])
     if cosine_empty_neighborhood is not None:
         mean_cos_neighborhoods = torch.zeros((number_cells, number_neighborhoods))
+        used_neighborhoods = None
     else:
         mean_cos_neighborhoods = []
+        used_neighborhoods = torch.ones((number_cells, number_neighborhoods), dtype=torch.bool)
     for cell, (original_index, neighborhoods_one_cell) in enumerate(zip(tqdm(original_indices_cells), neighborhoods)):
         if cosine_empty_neighborhood is None:
             mean_cos_neighborhoods_cell = []
@@ -104,6 +106,8 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
             if len(neighborhood) == 0:
                 if cosine_empty_neighborhood is not None:
                     mean_cos_neighborhoods[cell, neighborhood_id] = cosine_empty_neighborhood
+                else:
+                    used_neighborhoods[cell, neighborhood_id] = False
             else:
                 mean_cos_directionality_one_cell_one_neighborhood = torch.mean(
                     cos_directionality_one_cell_one_neighborhood(expression[original_index],
@@ -117,4 +121,4 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
                     mean_cos_neighborhoods_cell.append(mean_cos_directionality_one_cell_one_neighborhood)
         if cosine_empty_neighborhood is None:
             mean_cos_neighborhoods.append(torch.tensor(mean_cos_neighborhoods_cell))
-    return mean_cos_neighborhoods
+    return mean_cos_neighborhoods, used_neighborhoods
