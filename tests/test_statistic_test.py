@@ -28,7 +28,7 @@ def test_mean_cos_directionality_varying_neighbors():
     velocity_vector = torch.tensor([[1, 0, 0.], [0, 1, 0.], [1, 0, 0.]])
     neighborhoods = [[[], []], [[], []], [[0], [0]]]
     original_indices_cells = [0, 1, 2]
-    mean_cos = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods,
+    mean_cos, _ = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods,
                                                          original_indices_cells)
     assert torch.allclose(mean_cos, torch.tensor([[2, 2], [2, 2], [1, 1.]]), atol=1e-6)
 
@@ -38,7 +38,7 @@ def test_mean_cos_directionality_varying_neighbors_ignore_empty():
     velocity_vector = torch.tensor([[1, 0, 0.], [0, 1, 0.], [1, 0, 0.]])
     neighborhoods = [[[], []], [[], []], [[0], [0]]]
     original_indices_cells = [0, 1, 2]
-    mean_cos = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods,
+    mean_cos, _ = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods,
                                                          original_indices_cells, cosine_empty_neighborhood=None)
     for cos, correct in zip(mean_cos, [torch.tensor([]), torch.tensor([]), torch.tensor([1, 1.])]):
         assert torch.allclose(cos, correct, atol=1e-6)
@@ -63,6 +63,6 @@ def test_same_results():
     result_same_neighbors = mean_cos_directionality_varying_neighborhoods_same_neighbors(expression, velocity_vector,
                                                                                          neighborhoods_same,
                                                                                          original_indices_cells)
-    result_varying_neighbors = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods_varying,
+    result_varying_neighbors, _ = mean_cos_directionality_varying_neighbors(expression, velocity_vector, neighborhoods_varying,
                                                                          original_indices_cells)
     assert torch.allclose(result_same_neighbors.flatten(), result_varying_neighbors.flatten(), atol=1e-6)
