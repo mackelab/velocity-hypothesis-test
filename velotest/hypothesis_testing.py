@@ -150,7 +150,9 @@ def run_hypothesis_test(
         x = torch.cos(angle)
         y = torch.sin(angle)
         Z_velo_position_random = Z_expr + torch.concatenate((x, y), dim=-1)
-        debug_dict['Z_velo_position_random'] = Z_velo_position_random.numpy()
+        Z_velo_position_random_transposed = Z_velo_position_random.detach().clone()
+        Z_velo_position_random_transposed = torch.transpose(Z_velo_position_random_transposed, 1, 0)
+        debug_dict['Z_velo_position_random'] = Z_velo_position_random_transposed.numpy()
 
         if exclusion_degree is not None:
             Z_velo_normalized = (Z_velo_position - Z_expr) / (Z_velo_position - Z_expr).norm(dim=1, keepdim=True)
@@ -224,7 +226,6 @@ def run_hypothesis_test(
     debug_dict['test_statistics_velocity'] = test_statistics_velocity
     debug_dict['test_statistics_random'] = test_statistics_random
 
-    # TODO: Probably want to switch number_neighborhoods and number_cells dimensions of Z_velo_position_random
     return p_values_all, h0_rejected_all, debug_dict
 
 
