@@ -172,7 +172,8 @@ def run_hypothesis_test(
         # Remove cells with empty neighborhood for visualized velocity
         neighborhoods_random_velocities = [neighborhoods_random_velocities[cell] for cell in
                                            non_empty_neighborhoods_indices]
-        mask_not_excluded = mask_not_excluded[non_empty_neighborhoods_indices]
+        if exclusion_degree is not None:
+            mask_not_excluded = mask_not_excluded[non_empty_neighborhoods_indices]
 
         # Merge neighborhoods (from velocity and random)
         # (list, list, Tensor)
@@ -187,7 +188,11 @@ def run_hypothesis_test(
                                                                                         neighborhoods,
                                                                                         non_empty_neighborhoods_indices,
                                                                                         cosine_empty_neighborhood)
-        debug_dict['test_statistic_all'] = test_statistics.copy()
+        if isinstance(test_statistics, torch.Tensor):
+            test_statistics_debug_dict = test_statistics.detach().clone()
+        else:
+            test_statistics_debug_dict = test_statistics.copy()
+        debug_dict['test_statistic_all'] = test_statistics_debug_dict
         debug_dict['used_neighborhoods'] = used_neighborhoods
 
         if exclusion_degree is not None:
