@@ -162,21 +162,17 @@ def run_hypothesis_test(
             mask_not_excluded = torch.logical_or(angle.squeeze() < theta - np.deg2rad(exclusion_degree),
                                                  angle.squeeze() > theta + np.deg2rad(exclusion_degree))
             mask_not_excluded = mask_not_excluded.T
-            debug_dict['mask_not_excluded'] = mask_not_excluded
+            debug_dict['mask_not_excluded-all'] = mask_not_excluded
 
         neighborhoods_random_velocities = find_neighbors_in_direction_of_velocity_multiple(Z_expr,
                                                                                            Z_velo_position_random,
                                                                                            nn_indices,
                                                                                            threshold_degree)
-        if exclusion_degree is not None:
-            # Select neighborhoods based on mask_not_excluded
-            neighborhoods_random_velocities = [[neighborhoods_one_cell[i] for i in np.where(mask_one_cell)[0]] for
-                                               mask_one_cell, neighborhoods_one_cell in
-                                               zip(mask_not_excluded, neighborhoods_random_velocities)]
 
-        # Remove empty neighborhoods
+        # Remove cells with empty neighborhood for visualized velocity
         neighborhoods_random_velocities = [neighborhoods_random_velocities[cell] for cell in
                                            non_empty_neighborhoods_indices]
+        mask_not_excluded = mask_not_excluded[non_empty_neighborhoods_indices]
 
         # Merge neighborhoods (from velocity and random)
         # (list, list, Tensor)
@@ -191,10 +187,26 @@ def run_hypothesis_test(
                                                                                         neighborhoods,
                                                                                         non_empty_neighborhoods_indices,
                                                                                         cosine_empty_neighborhood)
+        debug_dict['test_statistic_all'] = test_statistics.copy()
         debug_dict['used_neighborhoods'] = used_neighborhoods
+
+        if exclusion_degree is not None:
+            # Select test_statistics based on mask_not_excluded
+            # We're first computing the test statistics for all neighborhoods, then selecting the ones
+            # that are not excluded. If one only wants to run the test, this wastes some time, but it makes it easier
+            # to compute the "optimal velocity" later and some of our visualisations.
+            # First element is the test statistic for the visualized velocity, the rest are random neighborhoods.
+
+            # Exclude the first neighborhood (the one in direction of the velocity) from the mask
+            used_neighborhoods = used_neighborhoods[:, 1:]
+            test_statistics = [
+                [test_statistics_one_cell[i] for i in np.append([0], np.where(mask_one_cell[used_neighborhoods_one_cell])[0] + 1)] for
+                mask_one_cell, test_statistics_one_cell, used_neighborhoods_one_cell in zip(mask_not_excluded, test_statistics, used_neighborhoods)
+            ]
+
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
-    debug_dict['neighborhoods'] = neighborhoods
+    debug_dict['neighborhoods_all'] = neighborhoods
 
     if cosine_empty_neighborhood is not None:
         test_statistics_velocity = test_statistics[:, 0]
