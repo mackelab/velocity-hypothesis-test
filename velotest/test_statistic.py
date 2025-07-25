@@ -215,3 +215,91 @@ def mean_cos_directionality_varying_neighbors_parallel(
     ]
 
     return mean_cos_neighborhoods, used_mask
+
+
+##### torch option
+
+def mean_cos_directionality_varying_neighbors_torch(
+        expression: torch.Tensor,  # (N_all_cells, G)
+        velocity_vector: torch.Tensor,  # (N_all_cells, G)
+        neighborhoods: List[List[List[int]]],  # len = N_selected_cells, each inner list len = N_neigh
+        original_indices_cells: List[int],  # len = N_selected_cells
+        chunk_size: int = 100000
+) -> Tuple[
+    List[torch.Tensor],  # per‑cell list of 1D tensors
+    torch.BoolTensor,  # used_mask:       (N_cells, N_neigh)
+]:
+    # 1) Gather the selected cells’ expressions & velocities
+    expr_sel = expression[original_indices_cells]  # (C, G)
+    vel_sel = velocity_vector[original_indices_cells]  # (C, G)
+
+    C, G = expr_sel.shape
+    N_neigh = len(neighborhoods[0])
+
+    # 2) Flatten all non‐empty (cell, neigh_id, each neighbor index) into 3 vectors
+    cell_ids = []
+    neigh_ids = []
+    nbr_indices = []
+    for i in range(C):
+        for j in range(N_neigh):
+            nbrs = neighborhoods[i][j]
+            if len(nbrs) > 0:  # skip empties entirely
+                cell_ids.extend([i] * len(nbrs))
+                neigh_ids.extend([j] * len(nbrs))
+                nbr_indices.extend(nbrs)
+
+    if len(nbr_indices) == 0:
+        # edge case: all neighborhoods empty
+        mean_cos_matrix = torch.zeros((C, N_neigh), dtype=torch.float32)
+        used_mask = torch.zeros((C, N_neigh), dtype=torch.bool)
+        mean_cos_list = [torch.empty(0) for _ in range(C)]
+        return mean_cos_list, used_mask
+
+    cell_ids = torch.tensor(cell_ids, dtype=torch.long)
+    neigh_ids = torch.tensor(neigh_ids, dtype=torch.long)
+    nbr_indices = torch.tensor(nbr_indices, dtype=torch.long)
+
+    # 2) Setup accumulators
+    T = C * N_neigh
+    sums = torch.zeros((T,), dtype=torch.float32)
+    counts = torch.zeros((T,), dtype=torch.float32)
+
+    # 3) Process in chunks
+    M = nbr_indices.shape[0]
+    for start in tqdm(range(0, M, chunk_size), total=(M + chunk_size - 1) // chunk_size):
+        end = min(start + chunk_size, M)
+        idx = slice(start, end)
+
+        # pull only this chunk’s neighbors & owner cells
+        ni = nbr_indices[idx]  # (B,)
+        ci = cell_ids[idx]  # (B,)
+        hi = neigh_ids[idx]  # (B,)
+
+        # gather expressions & vel
+        en = expression[ni]  # (B, G)
+        ec = expr_sel[ci]  # (B, G)
+        vc = vel_sel[ci]  # (B, G)
+
+        # compute cosines
+        deltas = en - ec  # (B, G)
+        cosines = torch.nn.functional.cosine_similarity(deltas, vc, dim=1, eps=1e-6)  # (B,)
+
+        # flat group ids = cell * N_neigh + neigh
+        gids = ci * N_neigh + hi  # (B,)
+
+        # scatter‑add into the big buffers
+        sums.scatter_add_(0, gids, cosines)
+        counts.scatter_add_(0, gids, torch.ones_like(cosines))
+
+    # 4) Finalize
+    means_flat = sums / counts.clamp(min=1.0)
+    mean_cos_matrix = means_flat.view(C, N_neigh)
+    used_mask = (counts.view(C, N_neigh) > 0)
+
+    # 7) Build the per‑cell list of 1D tensors
+    mean_cos_list: List[torch.Tensor] = []
+    for i in range(C):
+        valid_means = mean_cos_matrix[i][used_mask[i]]
+        mean_cos_list.append(valid_means)
+
+    return mean_cos_list, used_mask

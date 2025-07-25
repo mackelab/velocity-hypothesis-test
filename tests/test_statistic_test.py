@@ -6,7 +6,8 @@ from velotest.test_statistic import (cos_directionality_one_cell_batch_same_neig
                                      cos_directionality_one_cell_one_neighborhood,
                                      mean_cos_directionality_varying_neighbors,
                                      mean_cos_directionality_varying_neighborhoods_same_neighbors,
-                                     mean_cos_directionality_varying_neighbors_parallel)
+                                     mean_cos_directionality_varying_neighbors_parallel,
+                                     mean_cos_directionality_varying_neighbors_torch)
 
 
 def test_cos_directionality_one_cell_batch_same_neighbors():
@@ -100,6 +101,15 @@ def test_parallelization_same_results(number_cells=50, number_neighborhoods=30):
         neighborhoods,
         original_indices_cells)
 
+    mean_cos_neighborhoods_torch, used_neighborhoods_torch = mean_cos_directionality_varying_neighbors_torch(
+        expression, velocity_vector,
+        neighborhoods,
+        original_indices_cells)
+
     for mean_one_cell, mean_parallel_one_cell in zip(mean_cos_neighborhoods, mean_cos_neighborhoods_parallel):
         assert torch.allclose(mean_one_cell, mean_parallel_one_cell, atol=1e-6)
     assert torch.allclose(used_neighborhoods, used_neighborhoods_parallel)
+
+    for mean_one_cell, mean_torch_one_cell in zip(mean_cos_neighborhoods, mean_cos_neighborhoods_torch):
+        assert torch.allclose(mean_one_cell, mean_torch_one_cell, atol=1e-6)
+    assert torch.allclose(used_neighborhoods, used_neighborhoods_torch)

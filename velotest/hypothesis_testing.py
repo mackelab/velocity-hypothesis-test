@@ -7,7 +7,8 @@ from scipy.stats import false_discovery_control
 from velotest.neighbors import find_neighbors, find_neighbors_in_direction_of_velocity, \
     find_neighbors_in_direction_of_velocity_multiple
 from velotest.test_statistic import mean_cos_directionality_varying_neighborhoods_same_neighbors, \
-    mean_cos_directionality_varying_neighbors, mean_cos_directionality_varying_neighbors_parallel
+    mean_cos_directionality_varying_neighbors, mean_cos_directionality_varying_neighbors_parallel, \
+    mean_cos_directionality_varying_neighbors_torch
 
 
 #: ArrayLike[NDArray]
@@ -194,11 +195,23 @@ def run_hypothesis_test(
                 non_empty_neighborhoods_indices,
                 cosine_empty_neighborhood)
         else:
-            test_statistics, used_neighborhoods = mean_cos_directionality_varying_neighbors_parallel(
-                X_expr,
-                X_velo_vector,
-                neighborhoods,
-                non_empty_neighborhoods_indices)
+            # Use parallelization for large number of neighborhoods
+            try:
+                import torch
+            except ImportError:
+                print("torch would speed up the computation even further.")
+                test_statistics, used_neighborhoods = mean_cos_directionality_varying_neighbors_parallel(
+                    X_expr,
+                    X_velo_vector,
+                    neighborhoods,
+                    non_empty_neighborhoods_indices)
+            else:
+                test_statistics, used_neighborhoods = mean_cos_directionality_varying_neighbors_torch(
+                    X_expr,
+                    X_velo_vector,
+                    neighborhoods,
+                    non_empty_neighborhoods_indices)
+
 
         if isinstance(test_statistics, torch.Tensor):
             test_statistics_debug_dict = test_statistics.detach().clone()
