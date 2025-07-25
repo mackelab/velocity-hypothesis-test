@@ -143,22 +143,31 @@ def _init_worker(expr: torch.Tensor,
     _vel = vel
 
 
-def _process_task(task: Tuple[int, int, int, List[int]]
-                 ) -> Tuple[int, int, torch.Tensor]:
+def _process_one_cell(args: Tuple[int, int, List[torch.Tensor]]
+                     ) -> Tuple[int, List[float], List[bool]]:
     """
-    Process one valid (non‑empty) neighborhood task.
-    Returns (cell_idx, neigh_id, computed_mean_cosine).
+    For cell_idx:
+      - compute all its non‑empty neighborhoods in one pass
+      - return list of floats + list of used‐flags
     """
-    cell_idx, orig_idx, neigh_id, neigh = task
-    m = torch.mean(
-        cos_directionality_one_cell_one_neighborhood(
-            _expr[orig_idx],
-            _vel[orig_idx],
-            _expr[neigh]
-        )
-    )
-    assert not torch.isnan(m), "NaN in cosine!"
-    return cell_idx, neigh_id, m
+    cell_idx, orig_idx, neighs = args
+    vals, used = [], []
+    x_i = _expr[orig_idx]
+    v_i = _vel[orig_idx]
+    for nb in neighs:
+        if len(nb) == 0:
+            used.append(False)
+        else:
+            # vectorized: get all neighbors, compute cosines at once
+            e_nb = _expr[nb]                     # (n_nb, genes)
+            sims = torch.nn.functional.cosine_similarity(
+                        e_nb - x_i,
+                        v_i.unsqueeze(0).expand_as(e_nb),
+                        dim=1
+                   )
+            vals.append(sims.mean().item())
+            used.append(True)
+    return cell_idx, vals, used
 
 
 def mean_cos_directionality_varying_neighbors_parallel(
@@ -180,14 +189,13 @@ def mean_cos_directionality_varying_neighbors_parallel(
 
     # prepare outputs
     used_mask = torch.zeros((n_cells, n_neigh), dtype=torch.bool)
-    per_cell_vals: List[dict] = [{} for _ in range(n_cells)]
+    per_cell_vals: List[List[float]] = [[] for _ in range(n_cells)]
 
-    # build tasks only for non‑empty neighborhoods
-    tasks: List[Tuple[int, int, int, torch.Tensor]] = []
-    for cell_idx, orig_idx in enumerate(original_indices_cells):
-        for neigh_id, neigh in enumerate(neighborhoods[cell_idx]):
-            if len(neigh) > 0:  # only non‑empty
-                tasks.append((cell_idx, orig_idx, neigh_id, neigh))
+    # build one task per cell
+    tasks = [
+        (cell_idx, orig_idx, neighborhoods[cell_idx])
+        for cell_idx, orig_idx in enumerate(original_indices_cells)
+    ]
 
     # parallel map
     with Pool(
@@ -195,21 +203,15 @@ def mean_cos_directionality_varying_neighbors_parallel(
         initializer=_init_worker,
         initargs=(expression, velocity_vector)
     ) as pool:
-        for cell_idx, neigh_id, val in tqdm(pool.imap_unordered(_process_task, tasks, chunksize=200000), total=len(tasks)):
-            used_mask[cell_idx, neigh_id] = True
-            # Make sure that vals in the right order based on neigh_id
-            per_cell_vals[cell_idx][neigh_id] = val
+        for cell_idx, vals, used in tqdm(pool.imap_unordered(_process_one_cell, tasks), total=n_cells):
+            used_mask[cell_idx, :] = torch.tensor(used, dtype=torch.bool)
+            per_cell_vals[cell_idx] = vals
 
     mean_cos_neighborhoods: List[torch.Tensor] = []
 
-    for cell_idx, cell_dict in enumerate(per_cell_vals):
-        # get the sorted neighborhood IDs that were actually computed
-        sorted_neigh_ids = sorted(cell_dict.keys())
-        # pull the values in order
-        vals_in_order = [cell_dict[nid] for nid in sorted_neigh_ids]
-        # convert to tensor
-        mean_cos_neighborhoods.append(
-            torch.tensor(vals_in_order, dtype=torch.float32)
-        )
+    mean_cos_neighborhoods = [
+        torch.tensor(vals, dtype=torch.float32)
+        for vals in per_cell_vals
+    ]
 
     return mean_cos_neighborhoods, used_mask

@@ -64,6 +64,7 @@ def run_hypothesis_test(
     alpha=0.05,
     cosine_empty_neighborhood=2,
     seed=0,
+    parallelization=True
 ):
     """
     Samples random neighborhoods for every cell and uses the high-dimensional cosine similarity between
@@ -183,8 +184,9 @@ def run_hypothesis_test(
             merged_neighborhoods_cell = [torch.tensor(neighbors_in_direction_of_velocity_cell)]
             merged_neighborhoods_cell.extend(random_neighborhoods_cell)
             neighborhoods.append(merged_neighborhoods_cell)
-        if cosine_empty_neighborhood is not None:
-            print("Cannot use parallelization with cosine_empty_neighborhood != None.")
+        if cosine_empty_neighborhood is not None or parallelization is False:
+            if parallelization:
+                print("Cannot use parallelization with cosine_empty_neighborhood != None.")
             test_statistics, used_neighborhoods = mean_cos_directionality_varying_neighbors(
                 X_expr,
                 X_velo_vector,
