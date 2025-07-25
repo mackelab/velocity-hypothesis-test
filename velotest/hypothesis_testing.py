@@ -7,7 +7,7 @@ from scipy.stats import false_discovery_control
 from velotest.neighbors import find_neighbors, find_neighbors_in_direction_of_velocity, \
     find_neighbors_in_direction_of_velocity_multiple
 from velotest.test_statistic import mean_cos_directionality_varying_neighborhoods_same_neighbors, \
-    mean_cos_directionality_varying_neighbors
+    mean_cos_directionality_varying_neighbors, mean_cos_directionality_varying_neighbors_parallel
 
 
 #: ArrayLike[NDArray]
@@ -183,11 +183,21 @@ def run_hypothesis_test(
             merged_neighborhoods_cell = [torch.tensor(neighbors_in_direction_of_velocity_cell)]
             merged_neighborhoods_cell.extend(random_neighborhoods_cell)
             neighborhoods.append(merged_neighborhoods_cell)
-        test_statistics, used_neighborhoods = mean_cos_directionality_varying_neighbors(X_expr,
-                                                                                        X_velo_vector,
-                                                                                        neighborhoods,
-                                                                                        non_empty_neighborhoods_indices,
-                                                                                        cosine_empty_neighborhood)
+        if cosine_empty_neighborhood is not None:
+            print("Cannot use parallelization with cosine_empty_neighborhood != None.")
+            test_statistics, used_neighborhoods = mean_cos_directionality_varying_neighbors(
+                X_expr,
+                X_velo_vector,
+                neighborhoods,
+                non_empty_neighborhoods_indices,
+                cosine_empty_neighborhood)
+        else:
+            test_statistics, used_neighborhoods = mean_cos_directionality_varying_neighbors_parallel(
+                X_expr,
+                X_velo_vector,
+                neighborhoods,
+                non_empty_neighborhoods_indices)
+
         if isinstance(test_statistics, torch.Tensor):
             test_statistics_debug_dict = test_statistics.detach().clone()
         else:
