@@ -96,6 +96,8 @@ def run_hypothesis_test(
         - ``neighborhoods``
     """
     assert not (null_distribution == 'neighbors' and cosine_empty_neighborhood is None)
+    # TODO: Port code to numpy, torch is not needed here.
+    import torch
 
     if not isinstance(X_expr, torch.Tensor):
         X_expr = torch.tensor(X_expr)
@@ -195,6 +197,7 @@ def run_hypothesis_test(
                 non_empty_neighborhoods_indices,
                 cosine_empty_neighborhood)
         else:
+            # TODO: Use numpy instead of torch for rest of code. Doesn't make sense like this right now.
             # Use parallelization for large number of neighborhoods
             try:
                 import torch
