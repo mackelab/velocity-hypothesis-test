@@ -288,6 +288,8 @@ def mean_cos_directionality_varying_neighbors_torch(
         gids = ci * N_neigh + hi  # (B,)
 
         # scatter‑add into the big buffers
+        if cosines.dtype != torch.float32:
+            cosines = cosines.to(torch.float32)
         sums.scatter_add_(0, gids, cosines)
         counts.scatter_add_(0, gids, torch.ones_like(cosines))
 
