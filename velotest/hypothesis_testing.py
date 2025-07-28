@@ -274,7 +274,7 @@ def run_hypothesis_test(
     return p_values_all, h0_rejected_all, debug_dict
 
 
-def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', restrict_to_velocity_genes=False, **kwargs):
+def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', velocity_basis=None, restrict_to_velocity_genes=False, **kwargs):
     """
     Runs the hypothesis test using high dimensional expressions, high dimensional velocity,
     and the embeddings from an adata object. For details, see `run_hypothesis_test`.
@@ -295,7 +295,11 @@ def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', rest
         X_expr = X_expr[:, adata.var.velocity_genes]
         X_velo_vector = X_velo_vector[:, adata.var.velocity_genes]
     Z_expr = adata.obsm[f"X_{basis}"]
-    Z_velo_position = Z_expr + adata.obsm[f'velocity_{basis}']
+    if velocity_basis is None:
+        velocity_basis_str = f'velocity_{basis}'
+    else:
+        velocity_basis_str = velocity_basis
+    Z_velo_position = Z_expr + adata.obsm[velocity_basis_str]
 
     if Z_expr.shape[1] > 2:
         Z_expr = Z_expr[:, :2]
