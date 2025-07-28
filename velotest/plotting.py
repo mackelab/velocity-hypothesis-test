@@ -7,10 +7,15 @@ import pandas as pd
 from matplotlib import patheffects
 from scvelo.plotting.utils import default_arrow
 from sklearn.utils import check_random_state
+import matplotlib as mpl
+from scvelo.tools.velocity_embedding import quiver_autoscale
+from sklearn.neighbors import NearestNeighbors
+from scipy.stats import norm as normal
 
 
 def scatter(X_emb: np.ndarray, label_colormap: Union[Dict, List] = None, labels: pd.Series = None,
-            ax: matplotlib.axes.Axes = None, title=None, marker="o", size=25, show_labels: bool = True, **kwargs):
+            ax: matplotlib.axes.Axes = None, title=None, marker="o", size=25, show_labels: bool = True,
+            alpha=0.5, **kwargs):
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 8), dpi=150)
 
@@ -23,7 +28,7 @@ def scatter(X_emb: np.ndarray, label_colormap: Union[Dict, List] = None, labels:
     glyph_colors = get_glyph_colors(X_emb, labels, label_colormap)
     random_state = check_random_state(0)
     draw_order = random_state.permutation(X_emb.shape[0])
-    ax.scatter(*X_emb[draw_order].T, c=glyph_colors[draw_order], s=size, lw=0, alpha=0.5, marker=marker, **kwargs)
+    ax.scatter(*X_emb[draw_order].T, c=glyph_colors[draw_order], s=size, lw=0, alpha=alpha, marker=marker, **kwargs)
 
     return ax
 
@@ -34,9 +39,13 @@ def arrow_plot(
         p_values: np.ndarray = None,
         h0_rejected: np.ndarray = None,
         labels: pd.Series = None,
+        plot_legend: bool = True,
         label_colormap: Union[Dict, List] = None,
         ax: matplotlib.axes.Axes = None,
         title=None,
+        fontsize: int = 12,
+        fontweight: str = "bold",
+        multiplier = 1
 ):
     """Plot the arrows defined by X and V."""
     if ax is None:
@@ -79,7 +88,7 @@ def arrow_plot(
             X_emb[irrelevant_velocities][:, 0], X_emb[irrelevant_velocities][:, 1],
             V_emb[irrelevant_velocities][:, 0] - X_emb[irrelevant_velocities][:, 0],
             V_emb[irrelevant_velocities][:, 1] - X_emb[irrelevant_velocities][:, 1],
-            facecolor='darkgrey', edgecolor='face', **quiver_kwargs
+            facecolor='darkgrey', edgecolor='face', alpha=0.5, **quiver_kwargs
         )
         ax.quiver(
             X_emb[significant][:, 0], X_emb[significant][:, 1], V_emb[significant][:, 0] - X_emb[significant][:, 0],
@@ -92,21 +101,20 @@ def arrow_plot(
     else:
         # 'multiplier' allows to scale the markers differently for different datasets
         # have to find an automatic way of doing it
-        multiplier = 1
         if labels is not None:
-            scatter(X_emb[not_tested], label_colormap, labels[not_tested], ax, marker="o", size=int(multiplier * 20),
-                    show_labels=False)
-            scatter(X_emb[not_significant], label_colormap, labels[not_significant], ax, marker="s",
+            scatter(X_emb[not_tested], label_colormap, labels[not_tested], ax, size=int(multiplier * 10),
+                    show_labels=False, alpha=0.1)
+            scatter(X_emb[not_significant], label_colormap, labels[not_significant], ax,
                     size=int(multiplier * 10),
-                    show_labels=False)
-            scatter(X_emb[significant], label_colormap, labels[significant], ax, marker="*", size=int(multiplier * 60),
-                    show_labels=False)
+                    show_labels=False, alpha=0.1)
+            scatter(X_emb[significant], label_colormap, labels[significant], ax, size=int(multiplier * 20),
+                    show_labels=False, alpha=1)
         else:
             scatter(X_emb[not_tested], label_colormap, ax=ax, marker="o", size=int(multiplier * 20))
             scatter(X_emb[not_significant], label_colormap, ax=ax, marker="s", size=int(multiplier * 10))
             scatter(X_emb[significant], label_colormap, ax=ax, marker="*", size=int(multiplier * 60))
-    if labels is not None:
-        plot_labels(ax, X_emb, labels)
+    if labels is not None and plot_legend:
+        plot_labels(ax, X_emb, labels, fontsize=fontsize, fontweight=fontweight)
 
     ax.set(xticks=[], yticks=[], box_aspect=1)
     if title is not None:
@@ -185,3 +193,152 @@ def plot_labels(
         texts.append(text)
 
     return texts
+
+
+def plot_optimal_velocity(adata, Z_expr, uncorrected_p_values, labels, label_colormap, test_statistic_all, Z_velo_position_random,
+                          used_neighborhoods, name):
+
+    mpl.rc_file('../matplotlibrc-embeddings')
+    fig, ax = plt.subplots(dpi=450, constrained_layout=True)
+    cm = 1 / 2.54  # centimeters in inches
+    fig.set_size_inches(3.17 * cm, 3.17 * cm)
+
+    non_empty_neighborhoods_indices = np.where(uncorrected_p_values != 2)[0]
+
+    best_velocities = compute_optimal_velocity(Z_velo_position_random, adata, non_empty_neighborhoods_indices,
+                                               test_statistic_all, used_neighborhoods)
+    glyph_colors = get_glyph_colors(Z_expr, labels, label_colormap)
+    plt.quiver(*Z_expr[non_empty_neighborhoods_indices].T,
+               *((best_velocities - Z_expr[non_empty_neighborhoods_indices]) * 0.4).T, angles='xy', scale_units='xy',
+               scale=1, color=glyph_colors[non_empty_neighborhoods_indices], alpha=0.5)
+    #ax.set_title("Optimal velocity")
+    ax.set(xticks=[], yticks=[], box_aspect=1)
+    fig.savefig(f"fig/{name}.pdf", dpi=450)
+    plt.show()
+
+
+def compute_optimal_velocity(Z_velo_position_random, adata, non_empty_neighborhoods_indices, test_statistic_all,
+                             used_neighborhoods):
+    import torch
+
+    non_empty_random_neighborhoods = used_neighborhoods[:, 1:]
+    non_empty_random_neighborhoods_indices = [np.where(neighborhoods_one_cell)[0] for neighborhoods_one_cell in
+                                              non_empty_random_neighborhoods]
+    best_velocities = np.zeros((len(non_empty_neighborhoods_indices), 2))
+    for cell in range(len(adata)):
+        converted_cell = torch.where(torch.tensor(non_empty_neighborhoods_indices) == cell)[0]
+        # converted_cell = np.where(np.array(non_empty_neighborhoods_indices) == cell)[0]
+        if converted_cell.shape[0] > 0:
+            good_velocities = np.argsort(test_statistic_all[converted_cell][1:])[-1]
+            best_velocities[converted_cell] = \
+                Z_velo_position_random[cell][non_empty_random_neighborhoods_indices[converted_cell]][
+                    good_velocities]
+    return best_velocities
+
+
+# Code from https://github.com/theislab/scvelo/blob/main/scvelo/plotting/velocity_embedding_grid.py#L28
+# Licenses under BSD 3-Clause License
+def compute_velocity_on_grid(
+        X_emb,
+        V_emb,
+        density=None,
+        smooth=None,
+        n_neighbors=None,
+        min_mass=None,
+        autoscale=True,
+        adjust_for_stream=False,
+        cutoff_perc=None,
+):
+    """TODO."""
+    # remove invalid cells
+    idx_valid = np.isfinite(X_emb.sum(1) + V_emb.sum(1))
+    X_emb = X_emb[idx_valid]
+    V_emb = V_emb[idx_valid]
+
+    # prepare grid
+    n_obs, n_dim = X_emb.shape
+    density = 1 if density is None else density
+    smooth = 0.5 if smooth is None else smooth
+
+    grs = []
+    for dim_i in range(n_dim):
+        m, M = np.min(X_emb[:, dim_i]), np.max(X_emb[:, dim_i])
+        m = m - 0.01 * np.abs(M - m)
+        M = M + 0.01 * np.abs(M - m)
+        gr = np.linspace(m, M, int(50 * density))
+        grs.append(gr)
+
+    meshes_tuple = np.meshgrid(*grs)
+    X_grid = np.vstack([i.flat for i in meshes_tuple]).T
+
+    # estimate grid velocities
+    if n_neighbors is None:
+        n_neighbors = int(n_obs / 50)
+    nn = NearestNeighbors(n_neighbors=n_neighbors, n_jobs=-1)
+    nn.fit(X_emb)
+    dists, neighs = nn.kneighbors(X_grid)
+
+    scale = np.mean([(g[1] - g[0]) for g in grs]) * smooth
+    weight = normal.pdf(x=dists, scale=scale)
+    p_mass = weight.sum(1)
+
+    V_grid = (V_emb[neighs] * weight[:, :, None]).sum(1)
+    V_grid /= np.maximum(1, p_mass)[:, None]
+    if min_mass is None:
+        min_mass = 1
+
+    if adjust_for_stream:
+        X_grid = np.stack([np.unique(X_grid[:, 0]), np.unique(X_grid[:, 1])])
+        ns = int(np.sqrt(len(V_grid[:, 0])))
+        V_grid = V_grid.T.reshape(2, ns, ns)
+
+        mass = np.sqrt((V_grid ** 2).sum(0))
+        min_mass = 10 ** (min_mass - 6)  # default min_mass = 1e-5
+        min_mass = np.clip(min_mass, None, np.max(mass) * 0.9)
+        cutoff = mass.reshape(V_grid[0].shape) < min_mass
+
+        if cutoff_perc is None:
+            cutoff_perc = 5
+        length = np.sum(np.mean(np.abs(V_emb[neighs]), axis=1), axis=1).T
+        length = length.reshape(ns, ns)
+        cutoff |= length < np.percentile(length, cutoff_perc)
+
+        V_grid[0][cutoff] = np.nan
+    else:
+        min_mass *= np.percentile(p_mass, 99) / 100
+        X_grid, V_grid = X_grid[p_mass > min_mass], V_grid[p_mass > min_mass]
+
+        if autoscale:
+            V_grid /= 3 * quiver_autoscale(X_grid, V_grid)
+
+    return X_grid, V_grid
+
+
+def cosine_similarity(x, y):
+    return np.sum(x * y, axis=1) / (np.linalg.norm(x, axis=1) * np.linalg.norm(y, axis=1))
+
+
+def compute_angle_on_gridplot_between(adata_visualized_velocity, adata_optimal_velocity, basis='umap',):
+    X_grid_scvelo, V_grid_scvelo = compute_velocity_on_grid(
+        X_emb=adata_visualized_velocity.obsm[f'X_{basis}'],
+        V_emb=adata_visualized_velocity.obsm[f'velocity_{basis}'],
+        # density=density,
+        autoscale=True,
+        # smooth=smooth,
+        # n_neighbors=n_neighbors,
+        # min_mass=min_mass,
+    )
+
+    X_grid_best, V_grid_best = compute_velocity_on_grid(
+        X_emb=adata_optimal_velocity.obsm[f'X_{basis}'],
+        V_emb=adata_optimal_velocity.obsm[f'velocity_{basis}'],
+        # density=density,
+        autoscale=True,
+        # smooth=smooth,
+        # n_neighbors=n_neighbors,
+        # min_mass=min_mass,
+    )
+
+    assert np.allclose(X_grid_scvelo, X_grid_best)
+
+    return np.rad2deg(np.arccos(cosine_similarity(V_grid_scvelo, V_grid_best)))
