@@ -37,6 +37,9 @@ def correct_for_multiple_testing(pvals, correction):
     elif correction == 'benjamini–hochberg':
         return false_discovery_control(pvals)
 
+    elif correction == 'benjamini-yekutieli':
+        return false_discovery_control(pvals, method='by')
+
     elif correction == 'bonferroni':
         n_tests = len(pvals)
         pvals_corrected = pvals * n_tests
