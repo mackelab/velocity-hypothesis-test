@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from scipy.stats import false_discovery_control
 
+from velotest.explicit_hypothesis_testing import run_explicit_test
 from velotest.neighbors import find_neighbors, find_neighbors_in_direction_of_velocity, \
     find_neighbors_in_direction_of_velocity_multiple
 from velotest.test_statistic import mean_cos_directionality_varying_neighborhoods_same_neighbors, \
@@ -91,6 +92,7 @@ def run_hypothesis_test(
     :param alpha: significance level used for Benjamini-Hochberg or Bonferroni correction.
     :param cosine_empty_neighborhood: See `mean_cos_directionality_varying_neighbors`.
     :param seed: Random seed for reproducibility.
+    :param parallelization: If True, use multiple cores for parallelization.
     :return:
         - ``p_values_`` (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
         - ``h0_rejected``
@@ -240,21 +242,36 @@ def run_hypothesis_test(
                 [test_statistics_one_cell[i] for i in np.append([0], np.where(mask_one_cell[used_neighborhoods_one_cell])[0] + 1)] for
                 mask_one_cell, test_statistics_one_cell, used_neighborhoods_one_cell in zip(mask_not_excluded, test_statistics, used_neighborhoods)
             ]
-
+    elif null_distribution == 'velocities-explicit':
+        uncorrected_p_values, statistics = run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
+                                                             number_neighbors_to_sample_from,
+                                                             gamma_deg=threshold_degree, parallel=parallelization,
+                                                             exclusion_deg=exclusion_degree)
+        p_values_ = uncorrected_p_values[uncorrected_p_values != 2]
+        debug_dict['statistics'] = statistics
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
-    debug_dict['neighborhoods_all'] = neighborhoods
 
-    if cosine_empty_neighborhood is not None:
-        test_statistics_velocity = test_statistics[:, 0]
-        test_statistics_random = test_statistics[:, 1:]
-    else:
-        test_statistics_velocity = [test_statistic[0] for test_statistic in test_statistics]
-        test_statistics_random = [test_statistic[1:] for test_statistic in test_statistics]
-    if cosine_empty_neighborhood is not None:
-        p_values_ = p_values(test_statistics_velocity, test_statistics_random).numpy()
-    else:
-        p_values_ = p_values_list(test_statistics_velocity, test_statistics_random).numpy()
+    if null_distribution == 'neighbors' or null_distribution == 'velocities':
+        debug_dict['neighborhoods_all'] = neighborhoods
+        if cosine_empty_neighborhood is not None:
+            test_statistics_velocity = test_statistics[:, 0]
+            test_statistics_random = test_statistics[:, 1:]
+        else:
+            test_statistics_velocity = [test_statistic[0] for test_statistic in test_statistics]
+            test_statistics_random = [test_statistic[1:] for test_statistic in test_statistics]
+        if cosine_empty_neighborhood is not None:
+            p_values_ = p_values(test_statistics_velocity, test_statistics_random).numpy()
+        else:
+            p_values_ = p_values_list(test_statistics_velocity, test_statistics_random).numpy()
+
+        if isinstance(test_statistics_velocity, torch.Tensor):
+            test_statistics_velocity = test_statistics_velocity.numpy()
+        if isinstance(test_statistics_random, torch.Tensor):
+            test_statistics_random = test_statistics_random.numpy()
+
+        debug_dict['test_statistics_velocity'] = test_statistics_velocity
+        debug_dict['test_statistics_random'] = test_statistics_random
 
     pvals_corrected = correct_for_multiple_testing(p_values_, correction)
     h0_rejected = pvals_corrected < alpha
@@ -266,14 +283,6 @@ def run_hypothesis_test(
         h0_rejected_all[non_empty_neighborhoods_bool] = h0_rejected
     else:
         h0_rejected_all = None
-
-    if isinstance(test_statistics_velocity, torch.Tensor):
-        test_statistics_velocity = test_statistics_velocity.numpy()
-    if isinstance(test_statistics_random, torch.Tensor):
-        test_statistics_random = test_statistics_random.numpy()
-
-    debug_dict['test_statistics_velocity'] = test_statistics_velocity
-    debug_dict['test_statistics_random'] = test_statistics_random
 
     return p_values_all, h0_rejected_all, debug_dict
 
