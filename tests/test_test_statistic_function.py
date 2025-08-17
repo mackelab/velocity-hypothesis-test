@@ -2,7 +2,6 @@ import unittest
 
 import anndata
 import numpy as np
-import torch
 
 from velotest.explicit_hypothesis_testing import run_explicit_test_from
 from velotest.hypothesis_testing import run_hypothesis_test_on
@@ -11,27 +10,24 @@ from velotest.test_statistic_function import TestStatistic
 
 class TestStatisticTest(unittest.TestCase):
     def test_normalization_factor(self):
-        func = TestStatistic(ranges=torch.tensor([[0, 1], [1, 4]]), values=torch.tensor([0, 0.9]))
+        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]))
         exclusion_angle = 0.5
         assert func.normalization_factor(exclusion_angle).item() == 3.5
 
-
     def test_p_value(self):
-        func = TestStatistic(ranges=torch.tensor([[0, 1], [1, 4]]), values=torch.tensor([0, 0.9]))
+        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]))
         assert func.p_value(-1) == 1.0
         assert func.p_value(0.5) == 0.75
         assert func.p_value(1) == 0
 
-
     def test_p_value_equal(self):
-        func = TestStatistic(ranges=torch.tensor([[0, 1], [1, 4]]), values=torch.tensor([0, 0.9]))
+        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]))
         assert func.p_value(0.9) == 0.75
 
-
     def test_p_value_exclusion(self):
-        func = TestStatistic(ranges=torch.tensor([[0, 1], [1, 4]]), values=torch.tensor([0, 1]))
+        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 1]))
         exclusion_angle = 0.5
-        assert func.p_value(0.5, exclusion_angle) == 3 / 3.5
+        assert np.allclose(func.p_value(0.5, exclusion_angle), 3 / 3.5)
 
 
 class TestStatisticIntegrationTest(unittest.TestCase):
@@ -63,8 +59,8 @@ class TestStatisticIntegrationTest(unittest.TestCase):
 
         for i, statistic in enumerate(statistics):
             if statistic is not None:
-                assert statistic(torch.tensor([0])) == statistic(torch.tensor([2*torch.pi-1e-6])), \
-                         f"Test statistic for cell {i} does not match at 0 and 2*pi"
+                assert statistic(np.array([0])) == statistic(np.array([2 * np.pi - 1e-6])), \
+                    f"Test statistic for cell {i} does not match at 0 and 2*pi"
 
     def test_matching_p_values_old_implementation(self):
         adata = self.__adata.copy()
@@ -76,7 +72,7 @@ class TestStatisticIntegrationTest(unittest.TestCase):
                                                             exclusion_degree=None)
         p_values_explicit, _ = run_explicit_test_from(adata, number_neighbors_to_sample_from=15)
 
-        assert torch.allclose(torch.tensor(uncorrected_p_values == 2), (p_values_explicit == 2)), \
+        assert np.allclose((uncorrected_p_values == 2), (p_values_explicit == 2)), \
             "Empty neighborhoods don't match"
         assert np.allclose(torch.tensor(uncorrected_p_values), p_values_explicit, atol=5e-2), \
             "Uncorrected p-values do not match explicit test statistic p-values"

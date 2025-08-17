@@ -94,7 +94,7 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
     statistics = []
     for ranges, values in results:
         if ranges is not None or values is not None:
-            statistics.append(TestStatistic(ranges=torch.tensor(ranges), values=torch.tensor(values)))
+            statistics.append(TestStatistic(ranges=np.array(ranges), values=np.array(values)))
         else:
             statistics.append(None)
     logging.debug(f"Created statistic objects in {time.time() - starttime:.3f} seconds")
