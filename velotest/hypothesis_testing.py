@@ -123,6 +123,7 @@ def run_hypothesis_test(
     number_cells = X_expr.shape[0]
 
     nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
+    nn_indices = torch.tensor(nn_indices, dtype=torch.long)
     neighbors_in_direction_of_velocity = find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices,
                                                                                  threshold_degree)
 
