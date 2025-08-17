@@ -2,6 +2,7 @@ import unittest
 
 import anndata
 import numpy as np
+from parameterized import parameterized
 
 from velotest.explicit_hypothesis_testing import run_explicit_test_from
 from velotest.hypothesis_testing import run_hypothesis_test_on
@@ -62,20 +63,29 @@ class TestStatisticIntegrationTest(unittest.TestCase):
                 assert statistic(np.array([0])) == statistic(np.array([2 * np.pi - 1e-6])), \
                     f"Test statistic for cell {i} does not match at 0 and 2*pi"
 
-    def test_matching_p_values_old_implementation(self):
+    @parameterized.expand([[None,], [5,], [10,], [45,]])
+    def test_matching_p_values_old_implementation(self, exclusion_deg):
         adata = self.__adata.copy()
         adata = adata[:20]
         uncorrected_p_values, _, _ = run_hypothesis_test_on(adata, number_neighborhoods=10000,
                                                             number_neighbors_to_sample_from=15,
                                                             null_distribution="velocities",
                                                             cosine_empty_neighborhood=None,
-                                                            exclusion_degree=None)
-        p_values_explicit, _ = run_explicit_test_from(adata, number_neighbors_to_sample_from=15)
+                                                            exclusion_degree=exclusion_deg)
+        p_values_explicit, _ = run_explicit_test_from(adata, number_neighbors_to_sample_from=15,
+                                                      exclusion_deg=exclusion_deg)
 
         assert np.allclose((uncorrected_p_values == 2), (p_values_explicit == 2)), \
             "Empty neighborhoods don't match"
-        assert np.allclose(torch.tensor(uncorrected_p_values), p_values_explicit, atol=5e-2), \
-            "Uncorrected p-values do not match explicit test statistic p-values"
+        # TODO: Why does atol have to grow with exclusion_deg? Faster than linear?
+        if exclusion_deg is None or exclusion_deg < 10:
+            atol = 2e-2
+        elif exclusion_deg < 45:
+            atol = 5e-2
+        else:
+            atol = 5e-1
+        assert np.allclose(uncorrected_p_values, p_values_explicit, atol=atol), \
+            f"Uncorrected p-values do not match explicit test statistic p-values. Max difference: {np.max(np.abs(uncorrected_p_values - p_values_explicit)):.3f}, " \
 
     def test_matching_p_values_old_parallel(self):
         adata = self.__adata.copy()

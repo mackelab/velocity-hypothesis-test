@@ -44,7 +44,7 @@ def run_explicit_test_from(adata, **kwargs):
 
 
 def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_neighbors_to_sample_from=300,
-                      gamma_deg: float = 22.5, parallel: bool = True):
+                      gamma_deg: float = 22.5, parallel: bool = True, exclusion_deg: float = None):
     if not isinstance(X_expr, torch.Tensor):
         X_expr = torch.tensor(X_expr, dtype=torch.float32)
     if not isinstance(X_velo_vector, torch.Tensor):
@@ -100,8 +100,13 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
     logging.debug(f"Created statistic objects in {time.time() - starttime:.3f} seconds")
 
     starttime = time.time()
-    p_values_uncorrected = torch.tensor([
-        statistic.p_value(t_obs=statistic(torch.tensor([0.]))) if statistic is not None else 2
+    if exclusion_deg is not None:
+        exclusion_rad = np.deg2rad(exclusion_deg)
+    else:
+        exclusion_rad = None
+    p_values_uncorrected = np.array([
+        statistic.p_value(t_obs=statistic(np.array([0.])), exclusion_angle=exclusion_rad)
+        if statistic is not None else 2
         for statistic in statistics])
     logging.debug(f"Computed uncorrected p-values in {time.time() - starttime:.3f} seconds")
 
