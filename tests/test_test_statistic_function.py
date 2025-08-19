@@ -116,4 +116,4 @@ class TestStatisticIntegrationTest(unittest.TestCase):
             if statistic is not None:
                 assert statistic.get_max_value()[1] >= torch.max(test_statistic_all[i]).item(), \
                     (f"Max explicit test statistic {statistic.get_max_value()[1]=} for cell {i} "
-                     f"is not >= than the max sampled test statistic {np.max(test_statistic_all[i])}")
+                     f"is not >= than the max sampled test statistic {torch.max(test_statistic_all[i])}")
