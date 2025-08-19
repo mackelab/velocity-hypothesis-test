@@ -108,3 +108,13 @@ class StepFunction1D:
             end_domain = self.get_ranges(exclusion_angle)[i, 1]
         domain.append((start_domain, end_domain))
         return domain
+
+    def get_max_value(self, exclusion_angle: float = None):
+        """
+        Returns the maximum value of the step function.
+        :param exclusion_angle: Angle around visualised velocity position where we ignore samples [in radians].
+        :return: Range in which maximum value occurs and value as a float.
+        """
+        values = self.get_values(exclusion_angle)
+        max_index = np.argmax(values)
+        return self.get_ranges(exclusion_angle)[max_index], values[max_index]

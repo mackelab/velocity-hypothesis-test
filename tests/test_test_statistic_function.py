@@ -2,6 +2,7 @@ import unittest
 
 import anndata
 import numpy as np
+import torch
 from parameterized import parameterized
 
 from velotest.explicit_hypothesis_testing import run_explicit_test_from
@@ -85,9 +86,9 @@ class TestStatisticIntegrationTest(unittest.TestCase):
         else:
             atol = 5e-1
         assert np.allclose(uncorrected_p_values, p_values_explicit, atol=atol), \
-            f"Uncorrected p-values do not match explicit test statistic p-values. Max difference: {np.max(np.abs(uncorrected_p_values - p_values_explicit)):.3f}, " \
+            f"Uncorrected p-values do not match explicit test statistic p-values. Max difference: {np.max(np.abs(uncorrected_p_values - p_values_explicit)):.3f}, "
 
-    def test_matching_p_values_old_parallel(self):
+    def test_matching_p_values_parallel(self):
         adata = self.__adata.copy()
         adata = adata[:20]
         p_values_parallel, _ = run_explicit_test_from(adata, number_neighbors_to_sample_from=15, parallel=True)
@@ -95,3 +96,24 @@ class TestStatisticIntegrationTest(unittest.TestCase):
 
         assert np.allclose(p_values_parallel, p_values_serial, atol=1e-6), \
             "Uncorrected p-values do not match explicit test statistic p-values"
+
+    def test_matching_max_test_statistic(self):
+        adata = self.__adata.copy()
+        _, _, debug_dict = run_hypothesis_test_on(adata, number_neighborhoods=500,
+                                                  number_neighbors_to_sample_from=40,
+                                                  null_distribution="velocities",
+                                                  cosine_empty_neighborhood=None)
+        test_statistic_all = debug_dict["test_statistic_all"]
+        _, _, debug_dict_explicit = run_hypothesis_test_on(adata, number_neighbors_to_sample_from=40,
+                                                           null_distribution="velocities-explicit",
+                                                           cosine_empty_neighborhood=None)
+        statistics = debug_dict_explicit["statistics"]
+        statistics = [statistic for statistic in statistics if statistic is not None]  # Remove None statistics
+
+        assert len(statistics)== len(test_statistic_all), \
+            f"Number of statistics {len(statistics)} does not match number of cells {len(test_statistic_all)}"
+        for i, statistic in enumerate(statistics):
+            if statistic is not None:
+                assert statistic.get_max_value()[1] >= torch.max(test_statistic_all[i]).item(), \
+                    (f"Max explicit test statistic {statistic.get_max_value()[1]=} for cell {i} "
+                     f"is not >= than the max sampled test statistic {np.max(test_statistic_all[i])}")
