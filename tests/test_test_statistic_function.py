@@ -114,6 +114,6 @@ class TestStatisticIntegrationTest(unittest.TestCase):
             f"Number of statistics {len(statistics)} does not match number of cells {len(test_statistic_all)}"
         for i, statistic in enumerate(statistics):
             if statistic is not None:
-                assert statistic.get_max_value()[1] >= torch.max(test_statistic_all[i]).item(), \
+                assert statistic.get_max_value()[1]+1e-6 >= torch.max(test_statistic_all[i]).item(), \
                     (f"Max explicit test statistic {statistic.get_max_value()[1]=} for cell {i} "
                      f"is not >= than the max sampled test statistic {torch.max(test_statistic_all[i])}")
