@@ -12,22 +12,22 @@ from velotest.test_statistic_function import TestStatistic
 
 class TestStatisticTest(unittest.TestCase):
     def test_normalization_factor(self):
-        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]))
+        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]), offset=0)
         exclusion_angle = 0.5
         assert func.normalization_factor(exclusion_angle).item() == 3.5
 
     def test_p_value(self):
-        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]))
+        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]), offset=0)
         assert func.p_value(-1) == 1.0
         assert func.p_value(0.5) == 0.75
         assert func.p_value(1) == 0
 
     def test_p_value_equal(self):
-        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]))
+        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 0.9]), offset=0)
         assert func.p_value(0.9) == 0.75
 
     def test_p_value_exclusion(self):
-        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 1]))
+        func = TestStatistic(ranges=np.array([[0, 1], [1, 4]]), values=np.array([0, 1]), offset=0)
         exclusion_angle = 0.5
         assert np.allclose(func.p_value(0.5, exclusion_angle), 3 / 3.5)
 
