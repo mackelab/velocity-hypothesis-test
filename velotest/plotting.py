@@ -45,7 +45,8 @@ def arrow_plot(
         title=None,
         fontsize: int = 12,
         fontweight: str = "bold",
-        multiplier = 1
+        multiplier = 1,
+        box=True
 ):
     """Plot the arrows defined by X and V."""
     if ax is None:
@@ -119,6 +120,10 @@ def arrow_plot(
     ax.set(xticks=[], yticks=[], box_aspect=1)
     if title is not None:
         ax.set_title(title)
+
+    if not box:
+        for spine in ax.spines.values():
+            spine.set_visible(False)
 
     return ax
 
