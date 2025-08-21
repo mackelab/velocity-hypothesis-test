@@ -1,6 +1,7 @@
 import logging
 from collections import deque
 from multiprocessing import cpu_count, Pool
+from typing import Optional
 
 import numpy as np
 import torch
@@ -106,13 +107,25 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
         exclusion_rad = np.deg2rad(exclusion_deg)
     else:
         exclusion_rad = None
-    p_values_uncorrected = np.array([
-        statistic.p_value(t_obs=statistic(np.array([0.])), exclusion_angle=exclusion_rad)
-        if statistic is not None else 2
-        for statistic in statistics])
+    p_values_uncorrected = compute_p_values(statistics, exclusion_rad)
     logging.debug(f"Computed uncorrected p-values in {time.time() - starttime:.3f} seconds")
 
     return p_values_uncorrected, statistics
+
+
+def compute_p_values(statistics: list[Optional[TestStatistic]], exclusion_rad: Optional[float]) -> np.ndarray:
+    """
+    Compute uncorrected p-values for the given statistic objects.
+
+    :param statistics:
+    :param exclusion_rad:
+    :return:
+    """
+    p_values = np.array([
+        statistic.p_value(t_obs=statistic(np.array([0.])), exclusion_angle=exclusion_rad)
+        if statistic is not None else 2
+        for statistic in statistics])
+    return p_values
 
 
 def compute_position_on_unit_circle(Z_expr, Z_velo_vector, nn_indices):
