@@ -67,7 +67,8 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
     cos_sim = cos_directionality_one_cell_one_neighborhood_batched(X_expr, X_velo_vector, X_expr[nn_indices])
     logging.debug(f"Computed cosine similarity in {time.time() - starttime:.3f} seconds")
 
-    aligned_theta = compute_position_on_unit_circle(Z_expr, Z_velo_vector, nn_indices)
+    aligned_theta, theta_visualised_velocities = compute_position_on_unit_circle(Z_expr, Z_velo_vector, nn_indices)
+    theta_visualised_velocities = theta_visualised_velocities.numpy()
 
     if not parallel:
         times = []
@@ -92,9 +93,10 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
 
     starttime = time.time()
     statistics = []
-    for ranges, values in results:
+    for (ranges, values), theta_visualised_velocity in zip(results, theta_visualised_velocities):
         if ranges is not None or values is not None:
-            statistics.append(TestStatistic(ranges=np.array(ranges), values=np.array(values)))
+            statistics.append(TestStatistic(ranges=np.array(ranges), values=np.array(values),
+                                            offset=theta_visualised_velocity))
         else:
             statistics.append(None)
     logging.debug(f"Created statistic objects in {time.time() - starttime:.3f} seconds")
@@ -119,7 +121,7 @@ def compute_position_on_unit_circle(Z_expr, Z_velo_vector, nn_indices):
     theta_visualised_velocity = torch.arctan2(Z_velo_vector[:, 1], Z_velo_vector[:, 0])
     aligned_theta = theta - theta_visualised_velocity.unsqueeze(1)
     aligned_theta = aligned_theta % (2 * np.pi)  # Ensure angles are in [0, 2pi)
-    return aligned_theta
+    return aligned_theta, theta_visualised_velocity
 
 
 def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: torch.Tensor,

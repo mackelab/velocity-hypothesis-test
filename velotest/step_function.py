@@ -6,8 +6,9 @@ import numpy as np
 class StepFunction1D:
     __ranges: np.ndarray
     __values: np.ndarray
+    __offset: float
 
-    def __init__(self, ranges: np.ndarray, values: np.ndarray):
+    def __init__(self, ranges: np.ndarray, values: np.ndarray, offset: float):
         """
 
         :param ranges:  A 2D tensor of shape (n_ranges, 2) where each row is a range [start, end]. Expressed in radians.
@@ -29,6 +30,7 @@ class StepFunction1D:
         assert np.all(ranges[:, 0] >= 0) and np.all(ranges[:, 1] <= 2 * np.pi), "Ranges are not in [0, 2*pi]"
         self.__ranges = ranges.astype(np.float32)
         self.__values = values.astype(np.float32)
+        self.__offset = offset
 
     @lru_cache(maxsize=5)
     def subset_function(self, exclusion_angle: float = None):
@@ -68,9 +70,11 @@ class StepFunction1D:
         else:
             return self.__ranges, self.__values
 
-    def get_ranges(self, exclusion_angle: float = None):
-        ranges = self.subset_function(exclusion_angle)[0]
-        return ranges
+    def get_ranges(self, exclusion_angle: float = None, offset: bool = False):
+        if not offset:
+            return self.subset_function(exclusion_angle)[0]
+        else:
+            return self.subset_function(exclusion_angle)[0] + self.__offset
 
     def get_values(self, exclusion_angle: float = None):
         return self.subset_function(exclusion_angle)[1]
@@ -92,29 +96,31 @@ class StepFunction1D:
         assert not np.any(np.isnan(result)), "X is not (completely) in the domain of the step function"
         return result
 
-    def get_domain(self, exclusion_angle: float = None):
+    def get_domain(self, exclusion_angle: float = None, offset: bool = False):
         """
 
         :param exclusion_angle: Angle around visualised velocity position where we ignore samples [in radians].
         :return:
         """
         domain = []
-        start_domain = self.get_ranges(exclusion_angle)[0, 0]
-        end_domain = self.get_ranges(exclusion_angle)[0, 1]
-        for i in range(1, self.get_ranges(exclusion_angle).shape[0]):
-            if self.get_ranges(exclusion_angle)[i, 0] > end_domain:
+        ranges = self.get_ranges(exclusion_angle, offset=offset)
+        start_domain = ranges[0, 0]
+        end_domain = ranges[0, 1]
+        for i in range(1, ranges.shape[0]):
+            if ranges[i, 0] > end_domain:
                 domain.append((start_domain, end_domain))
-                start_domain = self.get_ranges(exclusion_angle)[i, 0]
-            end_domain = self.get_ranges(exclusion_angle)[i, 1]
+                start_domain = ranges[i, 0]
+            end_domain = ranges[i, 1]
         domain.append((start_domain, end_domain))
         return domain
 
-    def get_max_value(self, exclusion_angle: float = None):
+    def get_max_value(self, exclusion_angle: float = None, offset: bool = False):
         """
         Returns the maximum value of the step function.
         :param exclusion_angle: Angle around visualised velocity position where we ignore samples [in radians].
+        :param offset: If True, converts the maximum value back to the original direction.
         :return: Range in which maximum value occurs and value as a float.
         """
         values = self.get_values(exclusion_angle)
         max_index = np.argmax(values)
-        return self.get_ranges(exclusion_angle)[max_index], values[max_index]
+        return self.get_ranges(exclusion_angle, offset=offset)[max_index], values[max_index]
