@@ -46,7 +46,8 @@ def arrow_plot(
         fontsize: int = 12,
         fontweight: str = "bold",
         multiplier = 1,
-        box=True
+        box=True,
+        vector_friendly: bool = False,
 ):
     """Plot the arrows defined by X and V."""
     if ax is None:
@@ -85,12 +86,13 @@ def arrow_plot(
         not_tested = significance == 2
         irrelevant_velocities = np.logical_or(not_tested, not_significant)
 
-        ax.quiver(
+        irrelevant_quiver = ax.quiver(
             X_emb[irrelevant_velocities][:, 0], X_emb[irrelevant_velocities][:, 1],
             V_emb[irrelevant_velocities][:, 0] - X_emb[irrelevant_velocities][:, 0],
             V_emb[irrelevant_velocities][:, 1] - X_emb[irrelevant_velocities][:, 1],
             facecolor='darkgrey', edgecolor='face', alpha=0.5, **quiver_kwargs
         )
+        irrelevant_quiver.set_rasterized(vector_friendly)
         ax.quiver(
             X_emb[significant][:, 0], X_emb[significant][:, 1], V_emb[significant][:, 0] - X_emb[significant][:, 0],
                                                                 V_emb[significant][:, 1] - X_emb[significant][:, 1],
@@ -114,6 +116,7 @@ def arrow_plot(
             scatter(X_emb[not_tested], label_colormap, ax=ax, marker="o", size=int(multiplier * 20))
             scatter(X_emb[not_significant], label_colormap, ax=ax, marker="s", size=int(multiplier * 10))
             scatter(X_emb[significant], label_colormap, ax=ax, marker="*", size=int(multiplier * 60))
+
     if labels is not None and plot_legend:
         plot_labels(ax, X_emb, labels, fontsize=fontsize, fontweight=fontweight)
 
