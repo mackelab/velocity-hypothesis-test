@@ -4,7 +4,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from matplotlib import patheffects
+from matplotlib import patheffects, pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scvelo.plotting.utils import default_arrow
 from sklearn.utils import check_random_state
 import matplotlib as mpl
@@ -350,3 +351,70 @@ def compute_angle_on_gridplot_between(adata_visualized_velocity, adata_optimal_v
     assert np.allclose(X_grid_scvelo, X_grid_best)
 
     return np.rad2deg(np.arccos(cosine_similarity(V_grid_scvelo, V_grid_best)))
+
+
+def plot_uniformity_histogram(samples, number_bins=100, ax=None, density=True):
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    _, bins, _ = plt.hist(samples, bins=number_bins, label="p-values", density=density)
+    N = len(samples)
+    p = 1 / number_bins
+    normalization = (N * np.diff(bins))[0]
+    ax.hlines(N * p / normalization, color="red", linestyle="--", label="Exp. value under Uniformity", xmin=0, xmax=1)
+    plt.fill_between(np.arange(0, 2), (N * p - 1.96 * np.sqrt(N * p * (1 - p))) / normalization,
+                     (N * p + 1.96 * np.sqrt(N * p * (1 - p))) / normalization, color="red", alpha=0.3, edgecolor=None)
+
+
+def plot_best_possible_velocities_statistic(Z_expr, best_possible_velocities_statistic, tested_cell_indices,
+                                            max_value=None, cbar=True, markersize=1.5, ax=None,
+                                            vector_friendly: bool = False):
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    if max_value is None:
+        max_value = np.max(np.abs(best_possible_velocities_statistic))
+    ax.scatter(*Z_expr.T, c='grey', s=markersize, label="Not tested", linewidths=0)
+    sc = ax.scatter(*Z_expr[tested_cell_indices].T, c=best_possible_velocities_statistic, cmap='seismic_r',
+                    vmax=max_value,
+                    vmin=-max_value, s=markersize, label="Best test statistic", linewidths=0)
+    sc.set_rasterized(vector_friendly)
+    ax.axis('off')
+    ax.set(box_aspect=1)
+    if cbar:
+        cbar = plt.colorbar(sc, ax=ax)
+        cbar.locator = plt.MaxNLocator(nbins=5)
+
+
+def plot_statistic_distribution(x, values, color="#02ADFF", bins=50, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    axScatter = ax
+    divider = make_axes_locatable(axScatter)
+    axHisty = divider.append_axes("right", 0.6, pad=0.1, sharey=axScatter)
+
+    # make some labels invisible
+    axHisty.yaxis.set_tick_params(labelleft=False)
+    axScatter.scatter(x, values, s=0.5, c=color, marker="s")
+    axScatter.set_xlabel("Position on unit circle rel. \nto visualised velocity [rad]")
+    axScatter.set_ylabel("Test statistic")
+    axScatter.set_xticks([0, np.pi, 2 * np.pi])
+    labels = ['$0$', r'$\pi$', r'$2\pi$']
+    axScatter.set_xticklabels(labels)
+    axScatter.yaxis.set_major_locator(plt.MaxNLocator(3))
+
+    axHisty.hist(values, bins=bins, orientation='horizontal', density=True, color=color)
+    axHisty.set_xlabel("Density")
+    axHisty.hlines(values[0], axHisty.get_xlim()[0], axHisty.get_xlim()[1], color='r',
+                   linestyle='dashed', linewidth=1)
+
+
+def plot_neighborhood(cell, Z_expr, neighborhoods, s=None, ax=None, vector_friendly: bool = False):
+    if ax is None:
+        fig, ax = plt.subplots()
+    neighborhood = neighborhoods[cell]
+    sc = ax.scatter(*Z_expr.T, c='grey', s=s)
+    sc.set_rasterized(vector_friendly)
+    sc = ax.scatter(*Z_expr[neighborhood].T, c='blue', label='neighborhood', s=s)
+    sc.set_rasterized(vector_friendly)
+    ax.axis('off')
