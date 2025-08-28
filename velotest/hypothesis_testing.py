@@ -245,8 +245,8 @@ def run_hypothesis_test(
     elif null_distribution == 'velocities-explicit':
         uncorrected_p_values, statistics = run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position,
                                                              number_neighbors_to_sample_from,
-                                                             gamma_deg=threshold_degree, parallel=parallelization,
-                                                             exclusion_deg=exclusion_degree)
+                                                             conesize_beta_deg=threshold_degree, parallel=parallelization,
+                                                             exclusion_gamma_deg=exclusion_degree)
         p_values_ = uncorrected_p_values[uncorrected_p_values != 2]
         debug_dict['statistics'] = statistics
     else:

@@ -45,7 +45,7 @@ def run_explicit_test_from(adata, **kwargs):
 
 
 def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_neighbors_to_sample_from=300,
-                      gamma_deg: float = 22.5, parallel: bool = True, exclusion_deg: float = None):
+                      conesize_beta_deg: float = 22.5, parallel: bool = True, exclusion_gamma_deg: float = None):
     if not isinstance(X_expr, torch.Tensor):
         X_expr = torch.tensor(X_expr, dtype=torch.float32)
     if not isinstance(X_velo_vector, torch.Tensor):
@@ -76,18 +76,18 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
         results = []
         for cell in tqdm(range(Z_expr.shape[0])):
             starttime = time.time()
-            ranges, values = compute_step_statistics(cell, cos_sim, aligned_theta, np.deg2rad(gamma_deg))
+            ranges, values = compute_step_statistics(cell, cos_sim, aligned_theta, np.deg2rad(conesize_beta_deg))
             results.append((ranges, values))
             elapsed_time = time.time() - starttime
             times.append(elapsed_time)
         logging.debug(f"Mean time per cell: {np.mean(times):.3f} seconds")
     else:
         num_cells = Z_expr.shape[0]
-        gamma = float(np.deg2rad(gamma_deg))
+        conesize_beta = float(np.deg2rad(conesize_beta_deg))
 
         # Use initializer so cos_sim and aligned_theta are copied to each worker only once
         with Pool(processes=cpu_count() - 1, initializer=_init_worker,
-                  initargs=(cos_sim, aligned_theta, gamma)) as pool:
+                  initargs=(cos_sim, aligned_theta, conesize_beta)) as pool:
             # pool.imap yields results in order; tqdm wraps it to show progress
             results_iter = pool.imap(_worker_cell, range(num_cells), chunksize=20)
             results = list(tqdm(results_iter, total=num_cells))
@@ -103,8 +103,8 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
     logging.debug(f"Created statistic objects in {time.time() - starttime:.3f} seconds")
 
     starttime = time.time()
-    if exclusion_deg is not None:
-        exclusion_rad = np.deg2rad(exclusion_deg)
+    if exclusion_gamma_deg is not None:
+        exclusion_rad = np.deg2rad(exclusion_gamma_deg)
     else:
         exclusion_rad = None
     p_values_uncorrected = compute_p_values(statistics, exclusion_rad)
@@ -138,14 +138,14 @@ def compute_position_on_unit_circle(Z_expr, Z_velo_vector, nn_indices):
 
 
 def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: torch.Tensor,
-                            gamma: float) -> (list, list):
+                            beta: float) -> (list, list):
     """
     Compute the test statistic and every point where it changes for a given cell.
 
     :param cell: Index of the cell to compute statistics for.
     :param cos_sim: Cosine similarity values for the high-dimensional velocities.
     :param aligned_theta: Tensor of angles aligned with visualised velocity.
-    :param gamma: Angle defining the cone size [in rad].
+    :param beta: Angle defining the cone size [in rad].
     :return: Ranges and values for the test statistic.
     """
     # Ensure aligned_theta and cos_sim are tensors
@@ -158,13 +158,13 @@ def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: tor
         "aligned_theta must be in the range [0, 2pi]"
     assert cell <= cos_sim.shape[0], \
         f"Cell index {cell} is out of bounds for cos_sim with shape {cos_sim.shape}"
-    assert 0 <= gamma <= np.pi, \
-        f"Gamma must be in the range [0, pi], got {gamma}"
+    assert 0 <= beta <= np.pi, \
+        f"Beta must be in the range [0, pi], got {beta}"
 
     # Initial cone: points in 0 to gamma and 2pi-gamma to 2pi
     position_velocity = 0
-    lower_limit_cone = 2 * np.pi - gamma
-    upper_limit_cone = gamma
+    lower_limit_cone = 2 * np.pi - beta
+    upper_limit_cone = beta
     neighbors_in_cone_bool = torch.logical_or(aligned_theta[cell] > lower_limit_cone,
                                               aligned_theta[cell] < upper_limit_cone)
     neighbors_in_cone = torch.where(neighbors_in_cone_bool)[0]
