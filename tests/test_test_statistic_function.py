@@ -74,7 +74,7 @@ class TestStatisticIntegrationTest(unittest.TestCase):
                                                             cosine_empty_neighborhood=None,
                                                             exclusion_degree=exclusion_deg)
         p_values_explicit, _ = run_explicit_test_from(adata, number_neighbors_to_sample_from=15,
-                                                      exclusion_deg=exclusion_deg)
+                                                      exclusion_gamma_deg=exclusion_deg)
 
         assert np.allclose((uncorrected_p_values == 2), (p_values_explicit == 2)), \
             "Empty neighborhoods don't match"
@@ -114,6 +114,6 @@ class TestStatisticIntegrationTest(unittest.TestCase):
             f"Number of statistics {len(statistics)} does not match number of cells {len(test_statistic_all)}"
         for i, statistic in enumerate(statistics):
             if statistic is not None:
-                assert statistic.get_max_value()[1]+1e-6 >= torch.max(test_statistic_all[i]).item(), \
+                assert statistic.get_max_value()[1] + 1e-6 >= torch.max(test_statistic_all[i]).item(), \
                     (f"Max explicit test statistic {statistic.get_max_value()[1]=} for cell {i} "
                      f"is not >= than the max sampled test statistic {torch.max(test_statistic_all[i])}")
