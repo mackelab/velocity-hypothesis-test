@@ -94,11 +94,12 @@ def arrow_plot(
             facecolor='darkgrey', edgecolor='face', alpha=0.5, **quiver_kwargs
         )
         irrelevant_quiver.set_rasterized(vector_friendly)
-        ax.quiver(
+        significant_quiver = ax.quiver(
             X_emb[significant][:, 0], X_emb[significant][:, 1], V_emb[significant][:, 0] - X_emb[significant][:, 0],
                                                                 V_emb[significant][:, 1] - X_emb[significant][:, 1],
             color='black', **quiver_kwargs
         )
+        significant_quiver.set_rasterized(vector_friendly)
 
     if significance is None:
         scatter(X_emb, label_colormap, labels, ax)
@@ -374,7 +375,8 @@ def plot_best_possible_velocities_statistic(Z_expr, best_possible_velocities_sta
 
     if max_value is None:
         max_value = np.max(np.abs(best_possible_velocities_statistic))
-    ax.scatter(*Z_expr.T, c='grey', s=markersize, label="Not tested", linewidths=0)
+    sc = ax.scatter(*Z_expr.T, c='grey', s=markersize, label="Not tested", linewidths=0)
+    sc.set_rasterized(vector_friendly)
     sc = ax.scatter(*Z_expr[tested_cell_indices].T, c=best_possible_velocities_statistic, cmap='seismic_r',
                     vmax=max_value,
                     vmin=-max_value, s=markersize, label="Best test statistic", linewidths=0)
