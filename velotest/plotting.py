@@ -388,7 +388,10 @@ def plot_best_possible_velocities_statistic(Z_expr, best_possible_velocities_sta
         cbar.locator = plt.MaxNLocator(nbins=5)
 
 
-def plot_statistic_distribution(x, values, color="#02ADFF", bins=50, ax=None):
+def plot_statistic_distribution(x_limited, values_limited, x_excluded, values_excluded,
+                                color=None, bins=50, ax=None, vector_friendly: bool = False):
+    if color is None:
+        color = ["#02ADFF", "#FF776D"]
     if ax is None:
         fig, ax = plt.subplots()
     axScatter = ax
@@ -397,7 +400,10 @@ def plot_statistic_distribution(x, values, color="#02ADFF", bins=50, ax=None):
 
     # make some labels invisible
     axHisty.yaxis.set_tick_params(labelleft=False)
-    axScatter.scatter(x, values, s=0.5, c=color, marker="s")
+    sc = axScatter.scatter(x_limited, values_limited, s=0.5, c=color[0], marker="s")
+    sc.set_rasterized(vector_friendly)
+    sc = axScatter.scatter(x_excluded, values_excluded, s=0.5, c=color[1], marker="s")
+    sc.set_rasterized(vector_friendly)
     axScatter.set_xlabel("Position on unit circle rel. \nto visualised velocity [rad]")
     axScatter.set_ylabel("Test statistic")
     axScatter.set_xticks([0, np.pi, 2 * np.pi])
@@ -405,9 +411,10 @@ def plot_statistic_distribution(x, values, color="#02ADFF", bins=50, ax=None):
     axScatter.set_xticklabels(labels)
     axScatter.yaxis.set_major_locator(plt.MaxNLocator(3))
 
-    axHisty.hist(values, bins=bins, orientation='horizontal', density=True, color=color)
+    axHisty.hist([values_limited, values_excluded], bins=bins, orientation='horizontal', density=True,
+                 color=color, stacked=True)
     axHisty.set_xlabel("Density")
-    axHisty.hlines(values[0], axHisty.get_xlim()[0], axHisty.get_xlim()[1], color='r',
+    axHisty.hlines(values_excluded[0], axHisty.get_xlim()[0], axHisty.get_xlim()[1], color='black',
                    linestyle='dashed', linewidth=1)
 
 
