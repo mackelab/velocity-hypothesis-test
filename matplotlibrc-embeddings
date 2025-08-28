@@ -16,10 +16,10 @@ image.interpolation   : nearest
 image.resample        : False
 image.composite_image : True
 
-axes.spines.left     : True
-axes.spines.bottom   : True
-axes.spines.top      : True
-axes.spines.right    : True
+axes.spines.left     : False
+axes.spines.bottom   : False
+axes.spines.top      : False
+axes.spines.right    : False
 axes.facecolor        : 'white'
 
 axes.linewidth       : 1.0
