@@ -78,9 +78,10 @@ def arrow_plot(
         significance = None
 
     if significance is None:
-        ax.quiver(
+        quiver = ax.quiver(
             X_emb[:, 0], X_emb[:, 1], V_emb[:, 0] - X_emb[:, 0], V_emb[:, 1] - X_emb[:, 1], **quiver_kwargs
         )
+        quiver.set_rasterized(vector_friendly)
     else:
         significant = significance == 1
         not_significant = significance == 0
@@ -107,22 +108,28 @@ def arrow_plot(
         # 'multiplier' allows to scale the markers differently for different datasets
         # have to find an automatic way of doing it
         if labels is not None:
-            scatter(X_emb[not_tested], label_colormap, labels[not_tested], ax, size=int(multiplier * 10),
-                    show_labels=False, alpha=0.1)
-            scatter(X_emb[not_significant], label_colormap, labels[not_significant], ax,
-                    size=int(multiplier * 10),
-                    show_labels=False, alpha=0.1)
-            scatter(X_emb[significant], label_colormap, labels[significant], ax, size=int(multiplier * 20),
-                    show_labels=False, alpha=1)
+            sc = scatter(X_emb[not_tested], label_colormap, labels[not_tested], ax, size=int(multiplier * 10),
+                         show_labels=False, alpha=0.1)
+            sc.set_rasterized(vector_friendly)
+            sc = scatter(X_emb[not_significant], label_colormap, labels[not_significant], ax,
+                         size=int(multiplier * 10),
+                         show_labels=False, alpha=0.1)
+            sc.set_rasterized(vector_friendly)
+            sc = scatter(X_emb[significant], label_colormap, labels[significant], ax, size=int(multiplier * 20),
+                         show_labels=False, alpha=1)
+            sc.set_rasterized(vector_friendly)
         else:
-            scatter(X_emb[not_tested], label_colormap, ax=ax, marker="o", size=int(multiplier * 20))
-            scatter(X_emb[not_significant], label_colormap, ax=ax, marker="s", size=int(multiplier * 10))
-            scatter(X_emb[significant], label_colormap, ax=ax, marker="*", size=int(multiplier * 60))
+            sc = scatter(X_emb[not_tested], label_colormap, ax=ax, marker="o", size=int(multiplier * 20))
+            sc.set_rasterized(vector_friendly)
+            sc = scatter(X_emb[not_significant], label_colormap, ax=ax, marker="s", size=int(multiplier * 10))
+            sc.set_rasterized(vector_friendly)
+            sc = scatter(X_emb[significant], label_colormap, ax=ax, marker="*", size=int(multiplier * 60))
+            sc.set_rasterized(vector_friendly)
 
     if labels is not None and plot_legend:
         plot_labels(ax, X_emb, labels, fontsize=fontsize, fontweight=fontweight)
 
-    ax.set(xticks=[], yticks=[], box_aspect=1)
+    ax.set(xticks=[], yticks=[])
     if title is not None:
         ax.set_title(title)
 
@@ -418,12 +425,17 @@ def plot_statistic_distribution(x_limited, values_limited, x_excluded, values_ex
                    linestyle='dashed', linewidth=1)
 
 
-def plot_neighborhood(cell, Z_expr, neighborhoods, s=None, ax=None, vector_friendly: bool = False):
+def plot_neighborhood(cell, Z_expr, neighborhoods, selected_neighbors=None, s=None, ax=None, vector_friendly: bool = False):
     if ax is None:
         fig, ax = plt.subplots()
     neighborhood = neighborhoods[cell]
     sc = ax.scatter(*Z_expr.T, c='grey', s=s)
     sc.set_rasterized(vector_friendly)
-    sc = ax.scatter(*Z_expr[neighborhood].T, c='blue', label='neighborhood', s=s)
+    sc = ax.scatter(*Z_expr[neighborhood].T, c='deepskyblue', label='neighborhood', s=s)
+    if selected_neighbors is not None:
+        sc = ax.scatter(*Z_expr[selected_neighbors].T, c='blue', label='exemplary cone', s=s)
+        sc.set_rasterized(vector_friendly)
+    sc.set_rasterized(vector_friendly)
+    sc = ax.scatter(*Z_expr[cell].T, c='orange', label='cell', s=s)
     sc.set_rasterized(vector_friendly)
     ax.axis('off')
