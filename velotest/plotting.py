@@ -411,12 +411,24 @@ def plot_statistic_distribution(x_limited, values_limited, x_excluded, values_ex
     sc.set_rasterized(vector_friendly)
     sc = axScatter.scatter(x_excluded, values_excluded, s=0.5, c=color[1], marker="s")
     sc.set_rasterized(vector_friendly)
-    axScatter.set_xlabel("Position on unit circle rel. \nto visualised velocity [rad]")
+    axScatter.set_xlabel("Position on unit circle rel. \nto visualised velocity")
     axScatter.set_ylabel("Test statistic")
     axScatter.set_xticks([0, np.pi, 2 * np.pi])
-    labels = ['$0$', r'$\pi$', r'$2\pi$']
+    labels = ['$0$', r'$180\degree$', r'$360\degree$']
     axScatter.set_xticklabels(labels)
     axScatter.yaxis.set_major_locator(plt.MaxNLocator(3))
+    start_vline = axScatter.get_ylim()[0]
+    if start_vline > 0:
+        start_vline *= 1.1
+    else:
+        start_vline *= 0.9
+    end_vline = axScatter.get_ylim()[1]
+    if end_vline > 0:
+        end_vline *= 0.9
+    else:
+        end_vline *= 1.1
+    axScatter.vlines(0, start_vline, end_vline, color='black', linestyle='dashed',
+                     linewidth=1, zorder=0)
 
     axHisty.hist([values_limited, values_excluded], bins=bins, orientation='horizontal', density=True,
                  color=color, stacked=True)
