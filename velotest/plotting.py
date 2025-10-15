@@ -361,9 +361,16 @@ def compute_angle_on_gridplot_between(adata_visualized_velocity, adata_optimal_v
     return np.rad2deg(np.arccos(cosine_similarity(V_grid_scvelo, V_grid_best)))
 
 
-def plot_uniformity_histogram(samples, number_bins=100, ax=None, density=True):
+def plot_uniformity_histogram(samples, number_bins=None, ax=None, density=True):
     if ax is None:
         fig, ax = plt.subplots()
+
+    if number_bins is None:
+        # Use the Freedman-Diaconis rule to determine the number of bins
+        q75, q25 = np.percentile(samples, [75, 25])
+        iqr = q75 - q25
+        bin_width = 2 * iqr * len(samples) ** (-1 / 3)
+        number_bins = math.ceil((samples.max() - samples.min()) / bin_width)
 
     _, bins, _ = plt.hist(samples, bins=number_bins, label="p-values", density=density)
     N = len(samples)
