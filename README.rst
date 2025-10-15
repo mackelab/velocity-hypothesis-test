@@ -85,7 +85,7 @@ It was originally developed for the analysis of single cell RNA sequencing data,
 but can be applied to any application with positional and velocity data.
 
 Reproducing plots from paper
---------------------
+------------------------------
 Make sure that you have the `experiment` extra installed (see Installation section above).
 
 Then, you can reproduce all figures by simply running `make_all_figures.py` in the `experiments` folder:
