@@ -2,6 +2,11 @@
 docs/_build
 velotest.egg-info/
 notebooks/data/
+notebooks/fig/
 tests/data/
 data/
 dist/
+experiments/fig/
+experiments/multirun/
+experiments/outputs/
+experiments/data/
