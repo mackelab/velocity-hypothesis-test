@@ -1,0 +1,10 @@
+defaults:
+  - defaults
+
+_target_: 'datasets.get_organogenesis_data'
+dataset_name: "organogenesis"
+basis: 'xy_loc'
+number_neighbors_to_sample_from: 100
+scvelo_color: 'celltype'
+scvelo_cluster_colors: 'celltype_mapped_refined_colors'
+interesting_neighborhoods: [0,8903,17805,14806,14805]

@@ -1,0 +1,9 @@
+defaults:
+  - defaults
+
+_target_: 'datasets.get_dentateyrus_data'
+dataset_name: "dentategyrus"
+basis: 'umap'
+number_neighbors_to_sample_from: 100
+scvelo_color: 'clusters'
+scvelo_cluster_colors: 'clusters_colors'

@@ -1,0 +1,28 @@
+name: Plots from paper
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+      - name: Install dependencies and velotest
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[experiment]"
+      - name: Produce figures
+        run:  |
+          cd experiments
+          python3 make_all_figures.py --multirun dataset=pancreas_stochastic,pancreas_dynamical,dentategyrus,\
+          bonemarrow,covid,gastrulation_erythroid,nystroem,developing_mouse_brain,organogenesis,veloviz

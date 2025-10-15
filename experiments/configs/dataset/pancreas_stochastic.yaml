@@ -1,0 +1,9 @@
+defaults:
+  - defaults
+
+_target_: 'datasets.get_pancreas_stochastic_data'
+dataset_name: "pancreas_stochastic"
+basis: 'umap'
+number_neighbors_to_sample_from: 200
+scvelo_color: 'clusters'
+scvelo_cluster_colors: 'clusters_colors'

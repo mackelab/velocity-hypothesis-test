@@ -4,7 +4,7 @@ mathtext.default     : regular
 font.serif           : Arial, sans-serif
 font.sans-serif      : Arial, sans-serif
 font.cursive         : Arial, sans-serif
-font.size            : 8
+font.size            : 7
 figure.titlesize     : medium
 legend.fontsize      : medium
 axes.titlesize       : medium

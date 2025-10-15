@@ -1,0 +1,9 @@
+defaults:
+  - defaults
+
+_target_: 'datasets.get_developing_mouse_brain_data'
+dataset_name: "developing_mouse_brain"
+basis: 'xy_loc'
+number_neighbors_to_sample_from: 200
+scvelo_color: 'leiden'
+scvelo_cluster_colors: 'leiden_colors'

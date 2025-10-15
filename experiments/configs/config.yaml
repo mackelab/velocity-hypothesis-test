@@ -1,0 +1,6 @@
+defaults:
+  - dataset: pancreas_stochastic
+
+hydra:
+  job:
+    chdir: False

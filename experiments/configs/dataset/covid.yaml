@@ -1,0 +1,9 @@
+defaults:
+  - defaults
+
+_target_: 'datasets.get_covid_data'
+dataset_name: "covid"
+basis: 'umap'
+number_neighbors_to_sample_from: 200
+scvelo_color: 'cell.type'
+scvelo_cluster_colors: 'cell.type_colors'

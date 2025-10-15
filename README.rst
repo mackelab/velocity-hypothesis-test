@@ -83,3 +83,18 @@ from the velocity-based neighborhood exceeds the level we would expect for a cer
 
 It was originally developed for the analysis of single cell RNA sequencing data,
 but can be applied to any application with positional and velocity data.
+
+Reproducing plots from paper
+--------------------
+Make sure that you have the `experiment` extra installed (see Installation section above).
+
+Then, you can reproduce all figures by simply running `make_all_figures.py` in the `experiments` folder:
+
+.. code-block:: bash
+
+   cd experiments
+   python make_all_figures.py --multirun=dataset=pancreas_stochastic,pancreas_dynamical,dentateyrus,bonemarrow,covid,gastrulation_erythroid,nystroem,developing_mouse_brain,organogenesis,veloviz
+
+This will create a `fig` folder in the `experiments` folder with all figures based on the configuration in `configs/`.
+This uses hydra to manage the configurations, so you can also modify individual configurations using the command line
+with `python make_all_figures.py dataset=pancreas_stochastic dataset.number_neighbors_to_sample_from=300`.

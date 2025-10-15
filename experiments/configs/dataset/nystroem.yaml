@@ -1,0 +1,9 @@
+defaults:
+  - defaults
+
+_target_: 'datasets.get_nystroem_data'
+dataset_name: "nystroem"
+basis: 'nystroem'
+number_neighbors_to_sample_from: 200
+scvelo_color: 'clusters'
+scvelo_cluster_colors: 'clusters_colors'
