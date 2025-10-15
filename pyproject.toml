@@ -48,5 +48,6 @@ packages = ["velotest"]
 testpaths = ["tests"]
 
 [project.urls]
-Homepage = "https://velocity-hypothesis-test.readthedocs.io/en/latest/index.html"
+Repository = "https://github.com/mackelab/velocity-hypothesis-test/"
 Issues = "https://github.com/mackelab/velocity-hypothesis-test/issues"
+Documentation = "https://velocity-hypothesis-test.readthedocs.io/en/latest/index.html"
