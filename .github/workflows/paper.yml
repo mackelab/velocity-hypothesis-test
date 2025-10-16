@@ -24,5 +24,4 @@ jobs:
       - name: Produce figures
         run:  |
           cd experiments
-          python3 make_all_figures.py --multirun dataset=pancreas_stochastic,pancreas_dynamical,dentategyrus,\
-          bonemarrow,covid,gastrulation_erythroid,nystroem,developing_mouse_brain,organogenesis,veloviz
+          python3 make_all_figures.py --multirun dataset=pancreas_stochastic
