@@ -1,4 +1,5 @@
 from typing import Optional
+from warnings import warn
 
 import numpy as np
 import torch
@@ -141,6 +142,10 @@ def run_hypothesis_test(
     number_neighbors_per_velocity_neighborhood = [len(neighborhood) for neighborhood in
                                                   neighbors_in_direction_of_velocity]
     if null_distribution == 'neighbors':
+        warn("Using random 'neighbors' as null_distribution is deprecated because "
+             "the resulting neighborhoods are too different to the ones produced by the velocity vector. "
+             "This option may be removed in future versions.",
+             DeprecationWarning, stacklevel=2)
         neighborhoods_random = []  # #cells long list of (#neighborhoods, #neighbors_per_neighborhood)
         for cell, number_neighbors in zip(non_empty_neighborhoods_indices, number_neighbors_per_velocity_neighborhood):
             neighborhoods_random.append(
@@ -154,6 +159,9 @@ def run_hypothesis_test(
                                                                                        neighborhoods,
                                                                                        non_empty_neighborhoods_indices)
     elif null_distribution == 'velocities':
+        warn("Using sampled 'velocities' as null_distribution is deprecated because "
+             "we can compute the resulting p-values faster explicitly. "
+             "Consider using the 'velocities-explicit' option.", DeprecationWarning, stacklevel=2)
         # Sample number_neighborhoods random velocities on unit circle for each cell and add them to Z_expr
         uniform = torch.distributions.uniform.Uniform(torch.tensor([0.0]), torch.tensor([2.0]))
         angle = torch.pi * uniform.sample(sample_shape=(number_neighborhoods, number_cells,))
