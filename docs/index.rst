@@ -7,5 +7,6 @@ Velotest documentation
    :maxdepth: 2
    :caption: Contents:
 
+   Home <self>
    source/modules
 
