@@ -44,15 +44,16 @@ def arrow_plot(
         label_colormap: Union[Dict, List] = None,
         ax: matplotlib.axes.Axes = None,
         title=None,
-        fontsize: int = 12,
+        fontsize: int = 7,
         fontweight: str = "bold",
         multiplier = 1,
-        box=True,
+        box=False,
         vector_friendly: bool = False,
 ):
     """Plot the arrows defined by X and V."""
     if ax is None:
         fig, ax = plt.subplots(figsize=(8, 8), dpi=150)
+    ax.set_aspect('equal')
 
     hl, hw, hal = default_arrow(3)
     quiver_kwargs = {
@@ -396,7 +397,6 @@ def plot_best_possible_velocities_statistic(Z_expr, best_possible_velocities_sta
                     vmin=-max_value, s=markersize, label="Best test statistic", linewidths=0)
     sc.set_rasterized(vector_friendly)
     ax.axis('off')
-    ax.set(box_aspect=1)
     if cbar:
         cbar = plt.colorbar(sc, ax=ax)
         cbar.locator = plt.MaxNLocator(nbins=5)

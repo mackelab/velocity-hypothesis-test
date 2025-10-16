@@ -96,10 +96,8 @@ def run_hypothesis_test(
     :param parallelization: If True, use multiple cores for parallelization.
     :return:
         - ``p_values_`` (p-values from test (not corrected), cells where test couldn't be run are assigned a value of 2),
-        - ``h0_rejected``
-        - ``test_statistics_velocity``
-        - ``test_statistics_random``
-        - ``neighborhoods``
+        - ``h0_rejected`` (boolean array indicating whether null hypothesis was rejected after correction),
+        - ``debug_dict`` (dictionary containing additional information and byproducts of the test)
     """
     assert not (null_distribution == 'neighbors' and cosine_empty_neighborhood is None)
     # TODO: Port code to numpy, torch is not needed here.
@@ -258,7 +256,8 @@ def run_hypothesis_test(
         p_values_ = uncorrected_p_values[non_empty_neighborhoods_bool]
         debug_dict['statistics'] = statistics
     else:
-        raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
+        raise ValueError(
+            f"Unknown null distribution: {null_distribution}. Use 'neighbors', 'velocities' or 'velocities-explicit'.")
 
     if null_distribution == 'neighbors' or null_distribution == 'velocities':
         debug_dict['neighborhoods_all'] = neighborhoods

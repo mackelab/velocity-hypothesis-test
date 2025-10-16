@@ -1,3 +1,8 @@
+.. image:: https://app.readthedocs.org/projects/velocity-hypothesis-test/badge/?version=latest&style=flat
+   :target: https://velocity-hypothesis-test.readthedocs.io/en/latest/
+.. image:: https://github.com/mackelab/velocity-hypothesis-test/actions/workflows/test.yml/badge.svg?branch=main
+   :target: https://github.com/mackelab/velocity-hypothesis-test/actions/workflows/test.yml
+
 Velotest is a hypothesis test for how well a 2D embedding of positional and velocity data represents
 the original high dimensional data. It's purpose is to help practitioners using 2D embeddings
 of single cell RNA sequencing data with RNA velocity decide which 2D velocity vectors are faithfully representing
@@ -57,10 +62,11 @@ An application on single-cell sequencing data (runnable notebook: :code:`noteboo
    scvelo.pl.velocity_embedding(adata)
 
    # Run test
-   uncorrected_p_values, h0_rejected, _, _, _ = run_hypothesis_test_on(adata)
+   uncorrected_p_values, h0_rejected, _ = run_hypothesis_test_on(adata)
 
 
 For plotting, you can use the :code:`plotting` module. Have a look at :code:`notebooks/demo.ipynb` for an example.
+Refer to `Read the Docs <https://velocity-hypothesis-test.readthedocs.io/en/latest/>`_ for a more detailed API documentation.
 
 
 Details
