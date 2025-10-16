@@ -65,7 +65,7 @@ def run_hypothesis_test(
     number_neighbors_to_sample_from=300,
     threshold_degree=22.5,
     exclusion_degree: Optional[float] = 10,
-    null_distribution='velocity-explicit',
+    null_distribution='velocities-explicit',
     correction='bonferroni',
     alpha=0.05,
     cosine_empty_neighborhood=None,
