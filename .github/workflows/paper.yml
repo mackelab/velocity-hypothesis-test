@@ -24,4 +24,4 @@ jobs:
       - name: Produce figures
         run:  |
           cd experiments
-          python3 make_all_figures.py --multirun dataset=pancreas_stochastic
+          python3 make_all_figures.py
