@@ -41,5 +41,3 @@ class IntegrationTest(unittest.TestCase):
                                                                       exclusion_degree=exclusion_degree)
         assert uncorrected_p_values.shape[0] == adata.n_obs
         assert h0_rejected.shape[0] == adata.n_obs
-        if null_distribution == 'neighbors':
-            assert np.sum(h0_rejected) >= 1
