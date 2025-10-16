@@ -64,7 +64,7 @@ def run_hypothesis_test(
     number_neighborhoods=500,
     number_neighbors_to_sample_from=300,
     threshold_degree=22.5,
-    exclusion_degree: Optional[float] = None,
+    exclusion_degree: Optional[float] = 10,
     null_distribution='velocity-explicit',
     correction='bonferroni',
     alpha=0.05,
@@ -295,7 +295,7 @@ def run_hypothesis_test(
     return p_values_all, h0_rejected_all, debug_dict
 
 
-def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', restrict_to_velocity_genes=False, **kwargs):
+def run_hypothesis_test_on(adata, ekey='Ms', vkey='velocity', basis='umap', restrict_to_velocity_genes=True, **kwargs):
     """
     Runs the hypothesis test using high dimensional expressions, high dimensional velocity,
     and the embeddings from an adata object. For details, see `run_hypothesis_test`.
