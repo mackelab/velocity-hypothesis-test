@@ -1,38 +1,33 @@
-Velotest is a hypothesis test for how well any 2D embedding of positional and velocity data represents
-the original high dimensional data. It's current main application is to help practitioners using 2D embeddings
+Velotest is a hypothesis test for how well a 2D embedding of positional and velocity data represents
+the original high dimensional data. It's purpose is to help practitioners using 2D embeddings
 of single cell RNA sequencing data with RNA velocity decide which 2D velocity vectors are faithfully representing
 the high-dimensional data.
 
 Installation
 ------------------
-.. code-block:: bash
-
-   pip install -e "."
-
-Later on:
+You can simply install the package via pip:
 
 .. code-block:: bash
 
    pip install velotest
 
-If you want to build the docs and/or run tests, use
+If you want to change bits of the code, install it in editable mode:
 
 .. code-block:: bash
 
-   pip install -e ".[docs]"
+   pip install -e "."
 
-or
-
-.. code-block:: bash
-
-   pip install -e ".[dev]",
-
-respectively.
+In both cases you'll need additional dependencies to build the docs, run tests, or reproduce the figures from the paper,
+which you can install via the extras :code:`docs`, :code:`dev`, or :code:`experiment`, either separately or in combination.
+For example, to install the docs extra, run :code:`pip install velotest[docs]`, or to install both the docs and dev extras,
+run :code:`pip install velotest[docs,dev]`.
+Similarly, if you installed in editable mode, you can run :code:`pip install -e ".[docs]"`.
 
 Usage
 ----------------
 
-If you have a 2D embedding of any data (see below for scRNA-seq data), you can use our general interface:
+If you have the embeddings and original data as individual arrays/tensor (see below for use with an `anndata` object),
+you can use our general interface:
 
 .. code-block:: python
 
@@ -43,7 +38,7 @@ If you have a 2D embedding of any data (see below for scRNA-seq data), you can u
 where low_d_velocity_position is the tip's position of the 2D velocity vector, NOT the velocity vector originating in low_d_position.
 
 
-An application on single-cell sequencing data (runnable notebook: `notebooks/demo.ipynb`) could look like this (following `scvelo's tutorial <https://scvelo.readthedocs.io/en/stable/VelocityBasics.html>`_):
+An application on single-cell sequencing data (runnable notebook: :code:`notebooks/demo.ipynb`) could look like this (following `scvelo's tutorial <https://scvelo.readthedocs.io/en/stable/VelocityBasics.html>`_):
 
 .. code-block:: python
 
@@ -65,19 +60,22 @@ An application on single-cell sequencing data (runnable notebook: `notebooks/dem
    uncorrected_p_values, h0_rejected, _, _, _ = run_hypothesis_test_on(adata)
 
 
-For plotting, you can use the `plotting` module. Have a look at `notebooks/demo.ipynb` for an example.
+For plotting, you can use the :code:`plotting` module. Have a look at :code:`notebooks/demo.ipynb` for an example.
 
 
 Details
 --------------------
-For a data point :math:`i`, it uses the mean cosine similarity between the velocity :math:`v_i` and
-the difference vector :math:`x_j-x_i` for all :math:`x_j` in a set of neighbors of :math:`x_i` as the test statistic.
-This set of neighbors is either chosen based on the points the velocity :math:`\tilde{v}_i` points to in 2D or
-is sampled randomly from the 2D neighbors of :math:`\tilde{x}_i`.
+Next, we will briefly summarize how the test works, for details see our paper.
+The tests tries to assess how well the 2D velocity vectors represent the high-dimensional velocity vectors.
+We quantify this by computing the mean cosine similarity between the high-dimensional velocity vector and
+the difference vectors to a set of neighbors in the high-dimensional space.
+For a data point :math:`i`, we use the mean cosine similarity between the velocity :math:`v_i` and
+the difference vector :math:`x_j-x_i` for all :math:`x_j` in a set of neighbors of :math:`\tilde{x}_i` as the test statistic.
+This set of neighbors is chosen based on the points the velocity :math:`\tilde{v}_i` points to in 2D.
 :math:`\tilde{v}_i` and :math:`\tilde{x}_i` are the 2D embeddings of :math:`v_i` and :math:`x_i`, respectively.
 
-The null hypothesis is that the observed statistic for the neighbors chosen based on the velocity comes from
-the same distribution as random neighbors.
+The null hypothesis is that the visualised 2D velocity vector is no more aligned with the high-dimensional velocity
+than a visually distinct random 2D direction.
 It is rejected if the number of random neighborhoods with a higher statistic as the statistic
 from the velocity-based neighborhood exceeds the level we would expect for a certain significance level.
 
@@ -86,15 +84,15 @@ but can be applied to any application with positional and velocity data.
 
 Reproducing plots from paper
 ------------------------------
-Make sure that you have the `experiment` extra installed (see Installation section above).
+Make sure that you have the :code:`experiment` extra installed (see Installation section above).
 
-Then, you can reproduce all figures by simply running `make_all_figures.py` in the `experiments` folder:
+Then, you can reproduce all figures by simply running :code:`make_all_figures.py` in the :code:`experiments` folder:
 
 .. code-block:: bash
 
    cd experiments
    python make_all_figures.py --multirun=dataset=pancreas_stochastic,pancreas_dynamical,dentateyrus,bonemarrow,covid,gastrulation_erythroid,nystroem,developing_mouse_brain,organogenesis,veloviz
 
-This will create a `fig` folder in the `experiments` folder with all figures based on the configuration in `configs/`.
+This will create a :code:`fig` folder in the :code:`experiments` folder with all figures based on the configuration in :code:`configs/`.
 This uses hydra to manage the configurations, so you can also modify individual configurations using the command line
-with `python make_all_figures.py dataset=pancreas_stochastic dataset.number_neighbors_to_sample_from=300`.
+with :code:`python make_all_figures.py dataset=pancreas_stochastic dataset.number_neighbors_to_sample_from=300`.
