@@ -72,7 +72,8 @@ class TestStatisticIntegrationTest(unittest.TestCase):
                                                             number_neighbors_to_sample_from=15,
                                                             null_distribution="velocities",
                                                             cosine_empty_neighborhood=None,
-                                                            exclusion_degree=exclusion_deg)
+                                                            exclusion_degree=exclusion_deg,
+                                                            restrict_to_velocity_genes=False)
         p_values_explicit, _ = run_explicit_test_from(adata, number_neighbors_to_sample_from=15,
                                                       exclusion_gamma_deg=exclusion_deg)
 

@@ -262,13 +262,13 @@ def run_hypothesis_test(
 
     if null_distribution == 'neighbors' or null_distribution == 'velocities':
         debug_dict['neighborhoods_all'] = neighborhoods
-        if cosine_empty_neighborhood is not None:
+        if isinstance(test_statistics, torch.Tensor):
             test_statistics_velocity = test_statistics[:, 0]
             test_statistics_random = test_statistics[:, 1:]
         else:
             test_statistics_velocity = [test_statistic[0] for test_statistic in test_statistics]
             test_statistics_random = [test_statistic[1:] for test_statistic in test_statistics]
-        if cosine_empty_neighborhood is not None:
+        if isinstance(test_statistics, torch.Tensor):
             p_values_ = p_values(test_statistics_velocity, test_statistics_random).numpy()
         else:
             p_values_ = p_values_list(test_statistics_velocity, test_statistics_random).numpy()

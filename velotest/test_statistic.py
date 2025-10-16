@@ -96,7 +96,7 @@ def mean_cos_directionality_varying_neighbors(expression: torch.Tensor,
     number_neighborhoods = len(neighborhoods[0])
     if cosine_empty_neighborhood is not None:
         mean_cos_neighborhoods = torch.zeros((number_cells, number_neighborhoods))
-        used_neighborhoods = None
+        used_neighborhoods = torch.ones((number_cells, number_neighborhoods), dtype=torch.bool)
     else:
         mean_cos_neighborhoods = []
         used_neighborhoods = torch.ones((number_cells, number_neighborhoods), dtype=torch.bool)
