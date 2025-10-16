@@ -1,6 +1,9 @@
+import os
+
 import numpy as np
 import torch
 import scvelo
+import pytest
 
 from velotest.test_statistic import (cos_directionality_one_cell_batch_same_neighbors, \
                                      cos_directionality_one_cell_one_neighborhood,
@@ -71,6 +74,7 @@ def test_same_results():
     assert torch.allclose(result_same_neighbors.flatten(), result_varying_neighbors.flatten(), atol=1e-6)
 
 
+@pytest.mark.skipif(os.getenv('CI') == 'true', reason="Parallel test doesn't work in CI")
 def test_parallelization_same_results(number_cells=50, number_neighborhoods=30):
     adata = scvelo.datasets.pancreas()
     adata = adata[:number_cells]
