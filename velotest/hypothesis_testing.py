@@ -255,7 +255,7 @@ def run_hypothesis_test(
                                                              number_neighbors_to_sample_from,
                                                              conesize_beta_deg=threshold_degree, parallel=parallelization,
                                                              exclusion_gamma_deg=exclusion_degree)
-        p_values_ = uncorrected_p_values[uncorrected_p_values != 2]
+        p_values_ = uncorrected_p_values[non_empty_neighborhoods_bool]
         debug_dict['statistics'] = statistics
     else:
         raise ValueError(f"Unknown null distribution: {null_distribution}. Use 'neighbors' or 'velocities'.")
