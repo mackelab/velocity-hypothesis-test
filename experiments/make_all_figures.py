@@ -15,7 +15,6 @@ from velotest.neighbors import find_neighbors, find_neighbors_in_direction_of_ve
 from velotest.plotting import arrow_plot, plot_uniformity_histogram, plot_best_possible_velocities_statistic, \
     plot_statistic_distribution, plot_neighborhood, compute_angle_on_gridplot_between
 
-
 def velocity_embedding_stream(adata, figsize, color_dict, cfg):
     fig, ax = plt.subplots(dpi=450, constrained_layout=True, figsize=figsize)
     ax.set(xticks=[], yticks=[])
@@ -32,11 +31,12 @@ def velocity_embedding_stream(adata, figsize, color_dict, cfg):
     ax.set_rasterized(True)
     ax.set_aspect('equal')
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-velocity_embedding_stream.pdf", transparent=True, dpi=1000)
+    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-velocity_embedding_stream"
+                f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", transparent=True, dpi=cfg.dpi)
 
 
 def test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, h0_rejected, labels,
-                 uncorrected_p_values_exclusion, name):
+                 uncorrected_p_values_exclusion, name, cfg):
     fig, ax = plt.subplots(dpi=450, figsize=figsize)
     ax.set_aspect('equal')
     arrow_plot(adata.obsm[Z_expr], adata.obsm[Z_expr] + adata.obsm[Z_velocity_vector], uncorrected_p_values_exclusion,
@@ -48,7 +48,7 @@ def test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, h0_rejec
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
     plt.text(0.975, 0.025, f'{np.sum(h0_rejected) / len(adata) * 100:.1f}%', transform=fig.transFigure,
              fontsize=7, ha="right")
-    plt.savefig(name, transparent=True, dpi=1000)
+    plt.savefig(name, transparent=True, dpi=cfg.dpi)
 
 
 def neighborhoods(Z_expr, adata, cell, cfg, figsize, nn_indices, selected_neighbors):
@@ -57,11 +57,12 @@ def neighborhoods(Z_expr, adata, cell, cfg, figsize, nn_indices, selected_neighb
                       selected_neighbors=selected_neighbors[cell])
     ax.set_aspect('equal')
     plt.savefig(
-        f"fig/05_{cfg.dataset.dataset_name}-neighborhood_{cell}-{cfg.dataset.number_neighbors_to_sample_from}.pdf",
-        transparent=True, dpi=1000)
+        f"fig/05_{cfg.dataset.dataset_name}-neighborhood_{cell}-{cfg.dataset.number_neighbors_to_sample_from}"
+        f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf",
+        transparent=True, dpi=cfg.dpi)
 
 
-def statistic_function(cell, statistics, figsize, name):
+def statistic_function(cell, statistics, figsize, name, cfg):
     func = statistics[cell]
     complete_dom = func.get_domain()
     limited_dom = func.get_domain(exclusion_angle=np.deg2rad(10))
@@ -73,7 +74,7 @@ def statistic_function(cell, statistics, figsize, name):
     fig, ax = plt.subplots(dpi=450, constrained_layout=True,
                            figsize=figsize)
     plot_statistic_distribution(x_limited, values_limited, x_excluded, values_excluded, ax=ax, vector_friendly=True)
-    plt.savefig(name, transparent=True, dpi=1000)
+    plt.savefig(name, transparent=True, dpi=cfg.dpi)
 
 
 def determine_significant_vectors(gamma_rad, non_empty_neighborhoods_indices, statistics):
@@ -117,49 +118,57 @@ def main(cfg: DictConfig):
     ### Test results
     test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, h0_rejected, labels,
                  uncorrected_p_values_exclusion,
-                 f"fig/05_{cfg.dataset.dataset_name}-test_results-10.pdf")
+                 f"fig/05_{cfg.dataset.dataset_name}-test_results-10{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf",
+                 cfg)
 
     rejection_wo_correction = uncorrected_p_values_exclusion < 0.05
     rejection_wo_correction[uncorrected_p_values_exclusion == 2] = False
     test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, rejection_wo_correction, labels,
                  uncorrected_p_values_exclusion,
-                 f"fig/05_{cfg.dataset.dataset_name}-test_results-10-wo_correction.pdf")
+                 f"fig/05_{cfg.dataset.dataset_name}-test_results-10-wo_correction"
+                 f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", cfg)
 
     h0_rejected_5, uncorrected_p_values_5 = determine_significant_vectors(np.deg2rad(5),
                                                                           non_empty_neighborhoods_indices,
                                                                           statistics)
     test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, h0_rejected_5, labels, uncorrected_p_values_5,
-                 f"fig/05_{cfg.dataset.dataset_name}-test_results-05.pdf")
+                 f"fig/05_{cfg.dataset.dataset_name}-test_results-05{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf",
+                 cfg)
 
     h0_rejected_225, uncorrected_p_values_225 = determine_significant_vectors(np.deg2rad(22.5),
                                                                               non_empty_neighborhoods_indices,
                                                                               statistics)
     test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, h0_rejected_225, labels,
                  uncorrected_p_values_225,
-                 f"fig/05_{cfg.dataset.dataset_name}-test_results-22_5.pdf")
+                 f"fig/05_{cfg.dataset.dataset_name}-test_results-22_5"
+                 f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", cfg)
 
     h0_rejected_45, uncorrected_p_values_45 = determine_significant_vectors(np.deg2rad(45),
                                                                             non_empty_neighborhoods_indices,
                                                                             statistics)
     test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, h0_rejected_45, labels, uncorrected_p_values_45,
-                 f"fig/05_{cfg.dataset.dataset_name}-test_results-45.pdf")
+                 f"fig/05_{cfg.dataset.dataset_name}-test_results-45{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf",
+                 cfg)
 
     h0_rejected_90, uncorrected_p_values_90 = determine_significant_vectors(np.deg2rad(90),
                                                                             non_empty_neighborhoods_indices,
                                                                             statistics)
     test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, h0_rejected_90, labels, uncorrected_p_values_90,
-                 f"fig/05_{cfg.dataset.dataset_name}-test_results-90.pdf")
+                 f"fig/05_{cfg.dataset.dataset_name}-test_results-90{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf",
+                 cfg)
 
     h0_rejected_0, uncorrected_p_values_0 = determine_significant_vectors(None, non_empty_neighborhoods_indices,
                                                                           statistics)
     test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, h0_rejected_0, labels, uncorrected_p_values_0,
-                 f"fig/05_{cfg.dataset.dataset_name}-test_results-00.pdf")
+                 f"fig/05_{cfg.dataset.dataset_name}-test_results-00{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf",
+                 cfg)
 
     rejection_wo_correction_0 = uncorrected_p_values_0 < 0.05
     rejection_wo_correction_0[uncorrected_p_values_0 == 2] = False
     test_results(adata, Z_expr, Z_velocity_vector, color_dict, figsize, rejection_wo_correction_0, labels,
                  uncorrected_p_values_0,
-                 f"fig/05_{cfg.dataset.dataset_name}-test_results-0-wo_correction.pdf")
+                 f"fig/05_{cfg.dataset.dataset_name}-test_results-0-wo_correction"
+                 f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", cfg)
 
     ### Test-optimal velocity
     best_possible_velocities = [statistic.get_max_value(offset=True)[0] for statistic in statistics if
@@ -203,7 +212,8 @@ def main(cfg: DictConfig):
     ax.set_aspect('equal')
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
     pl.set_rasterized(True)
-    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-optimal_velocity.pdf", transparent=True, dpi=1000)
+    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-optimal_velocity{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf",
+                transparent=True, dpi=cfg.dpi)
 
     ### Untestable
     fig, ax = plt.subplots(dpi=450, figsize=figsize)
@@ -215,7 +225,8 @@ def main(cfg: DictConfig):
     ax.set(xticks=[], yticks=[])
     ax.set_aspect('equal')
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-untestable.pdf", transparent=True, dpi=1000)
+    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-untestable{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf",
+                transparent=True, dpi=cfg.dpi)
     print(f"Untested cells for {cfg.dataset.dataset_name}: {np.sum(uncorrected_p_values_exclusion == 2)}, {np.sum(uncorrected_p_values_exclusion == 2) / len(adata): .2%}")
 
     ### Neighborhoods
@@ -237,7 +248,8 @@ def main(cfg: DictConfig):
                                             vector_friendly=True,
                                             max_value=0.97)
     ax.set_aspect('equal')
-    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-best_test_statistic-colorbar.pdf", transparent=True, dpi=1000)
+    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-best_test_statistic-colorbar"
+                f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", transparent=True, dpi=cfg.dpi)
 
     fig, ax = plt.subplots(dpi=450, figsize=figsize)
     ax.set_aspect('equal')
@@ -249,7 +261,8 @@ def main(cfg: DictConfig):
                                             max_value=0.97,
                                             cbar=False)
     fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-best_test_statistic.pdf", transparent=True, dpi=1000)
+    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-best_test_statistic"
+                f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", transparent=True, dpi=cfg.dpi)
 
     mpl.rc_file("../matplotlibrc")
     fig, ax = plt.subplots(dpi=450, constrained_layout=True,
@@ -266,7 +279,8 @@ def main(cfg: DictConfig):
     plt.ylim(top=8.38)
     # plt.xlabel("Best test statistic among all random velocities")
     # plt.ylabel("Count")
-    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-best_test_statistic-histogram.pdf", transparent=True, dpi=450)
+    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-best_test_statistic-histogram"
+                f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", transparent=True, dpi=cfg.dpi)
 
     ### Graphical diagnostic
     mpl.rc_file("../matplotlibrc")
@@ -281,14 +295,16 @@ def main(cfg: DictConfig):
     plt.ylim(top=5.43)
     # plt.xlabel("p-value")
 
-    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-uniformity_histogram-wide.pdf", transparent=True, dpi=450)
+    plt.savefig(f"fig/05_{cfg.dataset.dataset_name}-uniformity_histogram-wide"
+                f"{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", transparent=True, dpi=cfg.dpi)
 
     ### Statistic function
     for cell in [0, 9, 12, 27, 1244]:
         if statistics[cell] is not None:
             try:
                 statistic_function(cell, statistics, (7.2 * cm, 4.75 * cm),
-                                   f"fig/05_{cfg.dataset.dataset_name}-test_statistic-explanation-stacked-cell-{cell}.pdf")
+                                   f"fig/05_{cfg.dataset.dataset_name}-test_statistic-explanation-stacked-cell-"
+                                   f"{cell}{f'_dpi_{cfg.dpi}' if cfg.dpi != 1000 else ''}.pdf", cfg)
             except AssertionError:
                 pass
 

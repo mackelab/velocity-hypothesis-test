@@ -4,3 +4,5 @@ defaults:
 hydra:
   job:
     chdir: False
+
+dpi: 600
