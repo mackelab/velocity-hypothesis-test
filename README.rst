@@ -27,6 +27,9 @@ which you can install via the extras :code:`docs`, :code:`dev`, or :code:`experi
 For example, to install the docs extra, run :code:`pip install velotest[docs]`, or to install both the docs and dev extras,
 run :code:`pip install velotest[docs,dev]`.
 Similarly, if you installed in editable mode, you can run :code:`pip install -e ".[docs]"`.
+CI tests are run with Python 3.9 and 3.13, we recommend to use one of those versions.
+We got some reports regarding a `problem <https://github.com/mackelab/velocity-hypothesis-test/issues/1>`_ on certain
+Linux VMs, we are investigating this.
 
 Usage
 ----------------
@@ -65,6 +68,7 @@ An application on single-cell sequencing data (runnable notebook: :code:`noteboo
    uncorrected_p_values, h0_rejected, _ = run_hypothesis_test_on(adata)
 
 
+The test should run in approximately 30 seconds on a MacBook M1 Pro.
 For plotting, you can use the :code:`plotting` module. Have a look at :code:`notebooks/demo.ipynb` for an example.
 Refer to `Read the Docs <https://velocity-hypothesis-test.readthedocs.io/en/latest/>`_ for a more detailed API documentation.
 
