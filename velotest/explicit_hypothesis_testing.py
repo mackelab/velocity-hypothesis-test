@@ -181,10 +181,12 @@ def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: tor
             (aligned_theta[cell][torch.tensor(points_in_cone_queue)] - lower_limit_cone) % (2 * torch.pi)).item())
     points_outside_cone_queue = deque(
         [index for index in indices_sorted_aligned_cell if index in neighbors_outside_cone])
-    # Rotate the queue so that the first point is the one closest to the upper limit of the cone
-    points_outside_cone_queue.rotate(
-        -torch.argmin(
-            (aligned_theta[cell][torch.tensor(points_outside_cone_queue)] - upper_limit_cone) % (2 * torch.pi)).item())
+    # Rotate the queue so that the first point is the one closest to the upper limit of the cone, if they exist
+    if len(points_outside_cone_queue) > 0:
+        points_outside_cone_queue.rotate(
+            -torch.argmin(
+                (aligned_theta[cell][torch.tensor(points_outside_cone_queue)] - upper_limit_cone) % (
+                            2 * torch.pi)).item())
 
     ranges = []
     values = []
