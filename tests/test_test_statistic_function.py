@@ -38,11 +38,15 @@ class TestStatisticIntegrationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import scvelo
+        import scanpy
 
         # Load data
         adata = scvelo.datasets.pancreas()
         adata = adata[:50]
-        scvelo.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=2000)
+        scvelo.pp.filter_genes(adata, min_shared_counts=20)
+        scvelo.pp.normalize_per_cell(adata)
+        scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
+        scanpy.pp.log1p(adata)
         scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
         # Compute velocity

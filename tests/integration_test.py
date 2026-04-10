@@ -5,7 +5,7 @@ from parameterized import parameterized
 
 from velotest.hypothesis_testing import run_hypothesis_test_on
 import scvelo
-import numpy as np
+import scanpy
 
 
 class IntegrationTest(unittest.TestCase):
@@ -16,7 +16,10 @@ class IntegrationTest(unittest.TestCase):
         # Load data
         adata = scvelo.datasets.pancreas()
         adata = adata[:50]
-        scvelo.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=2000)
+        scvelo.pp.filter_genes(adata, min_shared_counts=20)
+        scvelo.pp.normalize_per_cell(adata)
+        scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
+        scanpy.pp.log1p(adata)
         scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
         # Compute velocity

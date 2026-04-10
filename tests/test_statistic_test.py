@@ -3,6 +3,7 @@ import os
 import numpy as np
 import torch
 import scvelo
+import scanpy
 import pytest
 
 from velotest.test_statistic import (cos_directionality_one_cell_batch_same_neighbors, \
@@ -53,7 +54,10 @@ def test_mean_cos_directionality_varying_neighbors_ignore_empty():
 def test_same_results():
     adata = scvelo.datasets.pancreas()
     adata = adata[:50]
-    scvelo.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=2000)
+    scvelo.pp.filter_genes(adata, min_shared_counts=20)
+    scvelo.pp.normalize_per_cell(adata)
+    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
+    scanpy.pp.log1p(adata)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
@@ -78,7 +82,10 @@ def test_same_results():
 def test_parallelization_same_results(number_cells=50, number_neighborhoods=30):
     adata = scvelo.datasets.pancreas()
     adata = adata[:number_cells]
-    scvelo.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=2000)
+    scvelo.pp.filter_genes(adata, min_shared_counts=20)
+    scvelo.pp.normalize_per_cell(adata)
+    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
+    scanpy.pp.log1p(adata)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
