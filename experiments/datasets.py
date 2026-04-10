@@ -177,3 +177,34 @@ def get_veloviz_data(**kwargs):
         adata.obsm['velocity_veloviz'], adata.obsm['velocity_veloviz2']
     scvelo.pl.velocity_embedding(adata, basis='veloviz', color='clusters', show=False)
     return adata
+
+
+def get_mouse_bone_marrow_data(**kwargs):
+    # Mouse bone marrow dataset from cell2fate
+    data_dir = os.path.join("data", "mouse_bone_marrow")
+    if not os.path.exists(data_dir):
+        try:
+            os.makedirs(data_dir)
+            urls = ["https://cell2fate.cog.sanger.ac.uk/MouseBoneMarrow/MouseBoneMarrow_anndata.h5ad"]
+            filenames = ["MouseBoneMarrow_anndata.h5ad"]
+            for filename, url in zip(filenames, urls):
+                _download(url, Path(os.path.join(data_dir, filename)))
+        except Exception as e:
+            print(f"Could not download data: {e}")
+            if os.path.exists(data_dir):
+                import shutil
+                shutil.rmtree(data_dir)
+            raise e
+    adata = scvelo.read(os.path.join(data_dir, "MouseBoneMarrow_anndata.h5ad"))
+
+    scvelo.pp.filter_and_normalize(adata, min_shared_counts=20, n_top_genes=2000)
+    scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
+
+    # Compute velocity
+    scvelo.tl.velocity(adata)
+
+    # Compute 2D embedding of velocity vectors
+    scvelo.tl.velocity_graph(adata)
+    scvelo.tl.velocity_embedding(adata)
+    scvelo.pl.velocity_embedding(adata, color="cell_type", show=False)
+    return adata

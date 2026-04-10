@@ -1,0 +1,9 @@
+defaults:
+  - defaults
+
+_target_: 'datasets.get_mouse_bone_marrow_data'
+dataset_name: "mouse_bone_marrow"
+basis: 'umap'
+number_neighbors_to_sample_from: 300
+scvelo_color: 'cell_type'
+scvelo_cluster_colors: 'cell_type_colors'
