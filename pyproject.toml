@@ -22,7 +22,7 @@ dependencies = [
     "tqdm >= 4.66.1",
     "matplotlib >= 3.8.2",
     "pandas>=2.1.4",
-    "scvelo>=0.3.2",
+    "scvelo==0.3.2",
 ]
 
 [project.optional-dependencies]
