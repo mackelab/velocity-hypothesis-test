@@ -22,6 +22,11 @@ axes.spines.top      : False
 axes.spines.right    : False
 axes.facecolor        : 'white'
 
+ytick.left: False
+ytick.labelleft: False
+xtick.bottom: False
+xtick.labelbottom: False
+
 axes.linewidth       : 1.0
 xtick.major.width    : 1.0
 xtick.minor.width    : 1.0
