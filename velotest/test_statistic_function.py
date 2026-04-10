@@ -2,6 +2,8 @@ from velotest.step_function import StepFunction1D
 
 
 class TestStatistic(StepFunction1D):
+    __test__ = False  # Tell pytest that this class is not a test
+
     def normalization_factor(self, exclusion_angle: float = None):
         """
         Computes the normalization factor for the step function.
