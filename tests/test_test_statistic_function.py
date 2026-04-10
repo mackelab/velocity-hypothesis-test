@@ -45,8 +45,8 @@ class TestStatisticIntegrationTest(unittest.TestCase):
         adata = adata[:50]
         scvelo.pp.filter_genes(adata, min_shared_counts=20)
         scvelo.pp.normalize_per_cell(adata)
-        scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
         scanpy.pp.log1p(adata)
+        scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
         scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
         # Compute velocity

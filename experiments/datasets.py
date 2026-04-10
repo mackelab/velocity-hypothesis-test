@@ -12,8 +12,8 @@ def get_pancreas_stochastic_data(**kwargs):
     adata = scvelo.datasets.pancreas()
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
@@ -29,8 +29,8 @@ def get_pancreas_dynamical_data(**kwargs):
     adata = scvelo.datasets.pancreas()
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     scvelo.tl.recover_dynamics(adata, n_jobs=7)
@@ -48,8 +48,8 @@ def get_dentateyrus_data(**kwargs):
     adata = scvelo.datasets.dentategyrus()
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
@@ -65,8 +65,8 @@ def get_bonemarrow_data(**kwargs):
     adata = scvelo.datasets.bonemarrow()
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
@@ -121,7 +121,8 @@ def get_covid_data(**kwargs):
 
     scvelo.pp.filter_genes(adata, min_shared_counts=10)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=3000)
+    scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=3000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=20)
     # scvelo.tl.recover_dynamics(adata)
     scvelo.tl.velocity(adata, mode='stochastic')
@@ -137,8 +138,8 @@ def get_gastrulation_erythroid_data(**kwargs):
     adata = scvelo.datasets.gastrulation_erythroid()
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
@@ -155,8 +156,8 @@ def get_nystroem_data(**kwargs):
     adata = scvelo.datasets.pancreas()
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
@@ -220,8 +221,8 @@ def get_mouse_bone_marrow_data(**kwargs):
 
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity

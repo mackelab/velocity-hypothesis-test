@@ -56,8 +56,8 @@ def test_same_results():
     adata = adata[:50]
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
@@ -84,8 +84,8 @@ def test_parallelization_same_results(number_cells=50, number_neighborhoods=30):
     adata = adata[:number_cells]
     scvelo.pp.filter_genes(adata, min_shared_counts=20)
     scvelo.pp.normalize_per_cell(adata)
-    scvelo.pp.filter_genes_dispersion(adata, n_top_genes=2000)
     scanpy.pp.log1p(adata)
+    scanpy.pp.highly_variable_genes(adata, n_top_genes=2000)
     scvelo.pp.moments(adata, n_pcs=30, n_neighbors=30)
 
     # Compute velocity
