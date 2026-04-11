@@ -22,8 +22,9 @@ dependencies = [
     "tqdm >= 4.66.1",
     "matplotlib >= 3.8.2",
     "pandas>=2.1.4",
+    "scanpy<1.10.0",
+    "anndata<0.11.0",
     "scvelo==0.3.2",
-    "scanpy<1.10.0"
 ]
 
 [project.optional-dependencies]
