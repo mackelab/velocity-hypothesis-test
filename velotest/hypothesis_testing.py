@@ -135,7 +135,7 @@ def run_hypothesis_test(
              "are not in the direction of the velocity vector. This is not adviced.", category=RuntimeWarning,
              stacklevel=2)
 
-    if exclusion_degree > 10:
+    if exclusion_degree is not None and exclusion_degree > 10:
         warn("exclusion_degree (called gamma in the paper) is set to a value larger than 10 degrees. "
              "This means that many alternative velocities are excluded from the test which can lead to false positives, "
              "e.g. a visualized velocity is reported to be significant without it actually being the case."
