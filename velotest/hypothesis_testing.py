@@ -1,5 +1,8 @@
 from typing import Optional
+import warnings
 from warnings import warn
+
+warnings.simplefilter('always', RuntimeWarning)
 
 import numpy as np
 import torch
@@ -100,6 +103,45 @@ def run_hypothesis_test(
         - ``debug_dict`` (dictionary containing additional information and byproducts of the test)
     """
     assert not (null_distribution == 'neighbors' and cosine_empty_neighborhood is None)
+
+    # Give user warnings if some parameters are set to extreme values
+    if number_neighbors_to_sample_from < len(Z_expr) * 0.01:
+        warn(f"number_neighbors_to_sample_from (called k in the paper) is set to {number_neighbors_to_sample_from}, "
+                f"which is less than 1% of the total number of cells ({len(Z_expr)}). "
+                f"This may lead to very small neighborhoods and potentially empty neighborhoods "
+                f"which cannot be used for testing. Make sure that this is not the case.", category=RuntimeWarning,
+             stacklevel=2)
+    elif number_neighbors_to_sample_from > len(Z_expr) * 0.2:
+        warn(f"number_neighbors_to_sample_from (called k in the paper) is set to {number_neighbors_to_sample_from}, "
+             f"which is more than 20% of the total number of cells ({len(Z_expr)}). "
+             f"This may lead to very large neighborhoods spanning over unconnected regions in the visualization. "
+             f"Make sure that this is not the case.", category=RuntimeWarning, stacklevel=2)
+
+    if threshold_degree < 15:
+        warn("threshold_degree (called beta in the paper) is set to a value smaller than 15 degrees. "
+             "This defines a very narrow cone around the velocity vector and leads to small neighborhoods "
+             "defined by the velocity vector. The neighborhoods may be empty because of this and "
+             "the test statistics will be more variable between similar velocity vectors. "
+             "Make sure that this is intended.", category=RuntimeWarning, stacklevel=2)
+    elif 30 < threshold_degree <= 90:
+        warn("threshold_degree (called beta in the paper) is set to a value larger than 30 degrees. "
+             "This defines a very wide cone around the velocity vector and leads to many neighbors being included "
+             "in the neighborhood defined by the velocity vector. The test statistics will therefore be more similar "
+             "between similar velocity vectors. Make sure that this is intended.", category=RuntimeWarning,
+             stacklevel=2)
+    elif threshold_degree > 90:
+        warn("threshold_degree (called beta in the paper) is set to a value larger than 90 degrees. "
+             "This means that the neighborhood defined by the velocity vector includes neighbors which "
+             "are not in the direction of the velocity vector. This is not adviced.", category=RuntimeWarning,
+             stacklevel=2)
+
+    if exclusion_degree > 10:
+        warn("exclusion_degree (called gamma in the paper) is set to a value larger than 10 degrees. "
+             "This means that many alternative velocities are excluded from the test which can lead to false positives, "
+             "e.g. a visualized velocity is reported to be significant without it actually being the case."
+             "If you change this parameter, please report it in your write up as it can change results significantly.",
+             category=RuntimeWarning, stacklevel=2)
+
     # TODO: Port code to numpy, torch is not needed here.
     import torch
 
