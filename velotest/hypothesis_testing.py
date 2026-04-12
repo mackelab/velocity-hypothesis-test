@@ -104,18 +104,49 @@ def run_hypothesis_test(
     """
     assert not (null_distribution == 'neighbors' and cosine_empty_neighborhood is None)
 
+    # TODO: Port code to numpy, torch is not needed here.
+    import torch
+
+    if not isinstance(X_expr, torch.Tensor):
+        X_expr = torch.tensor(X_expr)
+    if not isinstance(X_velo_vector, torch.Tensor):
+        X_velo_vector = torch.tensor(X_velo_vector)
+    if not isinstance(Z_expr, torch.Tensor):
+        Z_expr = torch.tensor(Z_expr)
+    if not isinstance(Z_velo_position, torch.Tensor):
+        Z_velo_position = torch.tensor(Z_velo_position)
+    if not isinstance(number_neighbors_to_sample_from, torch.Tensor):
+        number_neighbors_to_sample_from = torch.tensor(number_neighbors_to_sample_from)
+
+    min_number_neighbors = torch.min(number_neighbors_to_sample_from).item()
+    max_number_neighbors = torch.max(number_neighbors_to_sample_from).item()
+    is_variable_number_neighbors = number_neighbors_to_sample_from.ndim > 0
+
     # Give user warnings if some parameters are set to extreme values
-    if number_neighbors_to_sample_from < len(Z_expr) * 0.01:
-        warn(f"number_neighbors_to_sample_from (called k in the paper) is set to {number_neighbors_to_sample_from}, "
-                f"which is less than 1% of the total number of cells ({len(Z_expr)}). "
-                f"This may lead to very small neighborhoods and potentially empty neighborhoods "
-                f"which cannot be used for testing. Make sure that this is not the case.", category=RuntimeWarning,
-             stacklevel=2)
-    elif number_neighbors_to_sample_from > len(Z_expr) * 0.2:
-        warn(f"number_neighbors_to_sample_from (called k in the paper) is set to {number_neighbors_to_sample_from}, "
-             f"which is more than 20% of the total number of cells ({len(Z_expr)}). "
-             f"This may lead to very large neighborhoods spanning over unconnected regions in the visualization. "
-             f"Make sure that this is not the case.", category=RuntimeWarning, stacklevel=2)
+    if min_number_neighbors < len(Z_expr) * 0.01:
+        if not is_variable_number_neighbors:
+            warn(f"number_neighbors_to_sample_from (called k in the paper) is set to {number_neighbors_to_sample_from}, "
+                    f"which is less than 1% of the total number of cells ({len(Z_expr)}). "
+                    f"This may lead to very small neighborhoods and potentially empty neighborhoods "
+                    f"which cannot be used for testing. Make sure that this is not the case.", category=RuntimeWarning,
+                 stacklevel=2)
+        else:
+            warn(f"number_neighbors_to_sample_from (called k in the paper) has a minimum value of {min_number_neighbors}, "
+                    f"which is less than 1% of the total number of cells ({len(Z_expr)}). "
+                    f"This may lead to very small neighborhoods and potentially empty neighborhoods "
+                    f"which cannot be used for testing. Make sure that this is not the case.", category=RuntimeWarning,
+                 stacklevel=2)
+    elif max_number_neighbors > len(Z_expr) * 0.2:
+        if not is_variable_number_neighbors:
+            warn(f"number_neighbors_to_sample_from (called k in the paper) is set to {number_neighbors_to_sample_from}, "
+                 f"which is more than 20% of the total number of cells ({len(Z_expr)}). "
+                 f"This may lead to very large neighborhoods spanning over unconnected regions in the visualization. "
+                 f"Make sure that this is not the case.", category=RuntimeWarning, stacklevel=2)
+        else:
+            warn(f"number_neighbors_to_sample_from (called k in the paper) has a maximum value of {max_number_neighbors}, "
+                 f"which is more than 20% of the total number of cells ({len(Z_expr)}). "
+                 f"This may lead to very large neighborhoods spanning over unconnected regions in the visualization. "
+                 f"Make sure that this is not the case.", category=RuntimeWarning, stacklevel=2)
 
     if threshold_degree < 15:
         warn("threshold_degree (called beta in the paper) is set to a value smaller than 15 degrees. "
@@ -142,18 +173,6 @@ def run_hypothesis_test(
              "If you change this parameter, please report it in your write up as it can change results significantly.",
              category=RuntimeWarning, stacklevel=2)
 
-    # TODO: Port code to numpy, torch is not needed here.
-    import torch
-
-    if not isinstance(X_expr, torch.Tensor):
-        X_expr = torch.tensor(X_expr)
-    if not isinstance(X_velo_vector, torch.Tensor):
-        X_velo_vector = torch.tensor(X_velo_vector)
-    if not isinstance(Z_expr, torch.Tensor):
-        Z_expr = torch.tensor(Z_expr)
-    if not isinstance(Z_velo_position, torch.Tensor):
-        Z_velo_position = torch.tensor(Z_velo_position)
-
     assert not (torch.isnan(X_expr).any()), ("X_expr contains NaN values. "
                                              "Please remove them before running the test.")
     assert not (torch.isnan(X_velo_vector).any()), ("X_velo_vector contains NaN values. "
@@ -163,24 +182,29 @@ def run_hypothesis_test(
     assert not (torch.isnan(Z_velo_position).any()), ("Z_velo_position contains NaN values. "
                                                       "Please remove them before running the test.")
 
+    if is_variable_number_neighbors and null_distribution != 'velocities-explicit':
+        raise ValueError("Variable neighborhood sizes are only supported with null_distribution='velocities-explicit'.")
+
     number_cells = X_expr.shape[0]
 
-    nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
-    nn_indices = torch.tensor(nn_indices, dtype=torch.long)
-    neighbors_in_direction_of_velocity = find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices,
-                                                                                 threshold_degree)
+    if null_distribution in ['neighbors', 'velocities']:
+        nn_indices = find_neighbors(Z_expr, k_neighbors=int(number_neighbors_to_sample_from))
+        nn_indices = torch.tensor(nn_indices, dtype=torch.long)
+        neighbors_in_direction_of_velocity = find_neighbors_in_direction_of_velocity(Z_expr, Z_velo_position, nn_indices,
+                                                                                     threshold_degree)
 
-    non_empty_neighborhoods_bool = [len(neighborhood) != 0 for neighborhood in neighbors_in_direction_of_velocity]
-    non_empty_neighborhoods_bool = np.array(non_empty_neighborhoods_bool)
-    non_empty_neighborhoods_indices = np.where(non_empty_neighborhoods_bool)[0]
-    neighbors_in_direction_of_velocity = [neighbors_in_direction_of_velocity[index] for index in
-                                          non_empty_neighborhoods_indices]
+        non_empty_neighborhoods_bool = [len(neighborhood) != 0 for neighborhood in neighbors_in_direction_of_velocity]
+        non_empty_neighborhoods_bool = np.array(non_empty_neighborhoods_bool)
+        non_empty_neighborhoods_indices = np.where(non_empty_neighborhoods_bool)[0]
+        neighbors_in_direction_of_velocity = [neighbors_in_direction_of_velocity[index] for index in
+                                              non_empty_neighborhoods_indices]
+
+        number_neighbors_per_velocity_neighborhood = [len(neighborhood) for neighborhood in
+                                                      neighbors_in_direction_of_velocity]
 
     np.random.seed(seed)
 
     debug_dict = {}
-    number_neighbors_per_velocity_neighborhood = [len(neighborhood) for neighborhood in
-                                                  neighbors_in_direction_of_velocity]
     if null_distribution == 'neighbors':
         warn("Using random 'neighbors' as null_distribution is deprecated because "
              "the resulting neighborhoods are too different to the ones produced by the velocity vector. "
@@ -295,6 +319,7 @@ def run_hypothesis_test(
                                                              number_neighbors_to_sample_from,
                                                              conesize_beta_deg=threshold_degree, parallel=parallelization,
                                                              exclusion_gamma_deg=exclusion_degree)
+        non_empty_neighborhoods_bool = (uncorrected_p_values != 2)
         p_values_ = uncorrected_p_values[non_empty_neighborhoods_bool]
         debug_dict['statistics'] = statistics
     else:

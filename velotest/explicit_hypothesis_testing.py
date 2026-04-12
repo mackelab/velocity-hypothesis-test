@@ -56,9 +56,18 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
         Z_velo_position = torch.tensor(Z_velo_position, dtype=torch.float32)
 
     Z_velo_vector = Z_velo_position - Z_expr
+
+    num_cells = Z_expr.shape[0]
+    number_neighbors_to_sample_from = np.array(number_neighbors_to_sample_from)
+    if number_neighbors_to_sample_from.ndim == 0:
+        number_neighbors_array = np.full(num_cells, number_neighbors_to_sample_from, dtype=int)
+    else:
+        number_neighbors_array = np.array(number_neighbors_to_sample_from, dtype=int)
+    max_number_neighbors = int(np.max(number_neighbors_array))
+
     import time
     starttime = time.time()
-    nn_indices = find_neighbors(Z_expr, k_neighbors=number_neighbors_to_sample_from)
+    nn_indices = find_neighbors(Z_expr, k_neighbors=max_number_neighbors)
     nn_indices = torch.tensor(nn_indices, dtype=torch.long)
     logging.debug(f"Found neighbors in {time.time() - starttime:.3f} seconds")
 
@@ -76,7 +85,8 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
         results = []
         for cell in tqdm(range(Z_expr.shape[0])):
             starttime = time.time()
-            ranges, values = compute_step_statistics(cell, cos_sim, aligned_theta, np.deg2rad(conesize_beta_deg))
+            ranges, values = compute_step_statistics(cell, cos_sim, aligned_theta, np.deg2rad(conesize_beta_deg),
+                                                     number_neighbors_array[cell])
             results.append((ranges, values))
             elapsed_time = time.time() - starttime
             times.append(elapsed_time)
@@ -87,7 +97,7 @@ def run_explicit_test(X_expr, X_velo_vector, Z_expr, Z_velo_position, number_nei
 
         # Use initializer so cos_sim and aligned_theta are copied to each worker only once
         with Pool(processes=cpu_count() - 1, initializer=_init_worker,
-                  initargs=(cos_sim, aligned_theta, conesize_beta)) as pool:
+                  initargs=(cos_sim, aligned_theta, conesize_beta, number_neighbors_array)) as pool:
             # pool.imap yields results in order; tqdm wraps it to show progress
             results_iter = pool.imap(_worker_cell, range(num_cells), chunksize=20)
             results = list(tqdm(results_iter, total=num_cells))
@@ -138,7 +148,7 @@ def compute_position_on_unit_circle(Z_expr, Z_velo_vector, nn_indices):
 
 
 def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: torch.Tensor,
-                            beta: float) -> (list, list):
+                            beta: float, number_neighbors_to_sample_from: int) -> (list, list):
     """
     Compute the test statistic and every point where it changes for a given cell.
 
@@ -146,6 +156,7 @@ def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: tor
     :param cos_sim: Cosine similarity values for the high-dimensional velocities.
     :param aligned_theta: Tensor of angles aligned with visualised velocity.
     :param beta: Angle defining the cone size [in rad].
+    :param number_neighbors_to_sample_from: Number of neighbors used to calculate the test statistic.
     :return: Ranges and values for the test statistic.
     """
     # Ensure aligned_theta and cos_sim are tensors
@@ -154,10 +165,13 @@ def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: tor
     if not isinstance(cos_sim, torch.Tensor):
         raise TypeError("cos_sim must be a torch.Tensor")
 
-    assert torch.all(aligned_theta >= 0) and torch.all(aligned_theta <= 2 * np.pi), \
-        "aligned_theta must be in the range [0, 2pi]"
+    aligned_theta_cell = aligned_theta[cell, :number_neighbors_to_sample_from]
     assert cell <= cos_sim.shape[0], \
         f"Cell index {cell} is out of bounds for cos_sim with shape {cos_sim.shape}"
+    cos_sim_cell = cos_sim[cell, :number_neighbors_to_sample_from]
+
+    assert torch.all(aligned_theta_cell >= 0) and torch.all(aligned_theta_cell <= 2 * np.pi), \
+        "aligned_theta must be in the range [0, 2pi]"
     assert 0 <= beta <= np.pi, \
         f"Beta must be in the range [0, pi], got {beta}"
 
@@ -165,39 +179,39 @@ def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: tor
     position_velocity = 0
     lower_limit_cone = 2 * np.pi - beta
     upper_limit_cone = beta
-    neighbors_in_cone_bool = torch.logical_or(aligned_theta[cell] > lower_limit_cone,
-                                              aligned_theta[cell] < upper_limit_cone)
+    neighbors_in_cone_bool = torch.logical_or(aligned_theta_cell > lower_limit_cone,
+                                              aligned_theta_cell < upper_limit_cone)
     neighbors_in_cone = torch.where(neighbors_in_cone_bool)[0]
     if len(neighbors_in_cone) == 0:
         # If no neighbors are in the cone, return Nones ranges and values
         return None, None
-    neighbors_outside_cone = set_subtraction(torch.arange(0, aligned_theta.shape[1], 1), neighbors_in_cone)
+    neighbors_outside_cone = set_subtraction(torch.arange(0, number_neighbors_to_sample_from, 1), neighbors_in_cone)
 
-    indices_sorted_aligned_cell = torch.argsort(aligned_theta[cell])
+    indices_sorted_aligned_cell = torch.argsort(aligned_theta_cell)
     points_in_cone_queue = deque([index for index in indices_sorted_aligned_cell if index in neighbors_in_cone])
     # Rotate the queue so that the first point is the one closest to the lower limit of the cone
     points_in_cone_queue.rotate(
         -torch.argmin(
-            (aligned_theta[cell][torch.tensor(points_in_cone_queue)] - lower_limit_cone) % (2 * torch.pi)).item())
+            (aligned_theta_cell[torch.tensor(points_in_cone_queue)] - lower_limit_cone) % (2 * torch.pi)).item())
     points_outside_cone_queue = deque(
         [index for index in indices_sorted_aligned_cell if index in neighbors_outside_cone])
     # Rotate the queue so that the first point is the one closest to the upper limit of the cone, if they exist
     if len(points_outside_cone_queue) > 0:
         points_outside_cone_queue.rotate(
             -torch.argmin(
-                (aligned_theta[cell][torch.tensor(points_outside_cone_queue)] - upper_limit_cone) % (
+                (aligned_theta_cell[torch.tensor(points_outside_cone_queue)] - upper_limit_cone) % (
                             2 * torch.pi)).item())
 
     ranges = []
     values = []
     while position_velocity < 2 * np.pi:
         if len(points_in_cone_queue) > 0:
-            distance_next_point_in_cone = (aligned_theta[cell][points_in_cone_queue[0]] - lower_limit_cone) % (
+            distance_next_point_in_cone = (aligned_theta_cell[points_in_cone_queue[0]] - lower_limit_cone) % (
                     2 * np.pi)
         else:
             distance_next_point_in_cone = np.inf
         if len(points_outside_cone_queue) > 0:
-            distance_next_point_outside_cone = (aligned_theta[cell][
+            distance_next_point_outside_cone = (aligned_theta_cell[
                                                     points_outside_cone_queue[0]] - upper_limit_cone) % (
                                                        2 * np.pi)
         else:
@@ -218,7 +232,7 @@ def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: tor
 
         # Only add range if there are points in the cone, function shouldn't be defined otherwise
         if len(points_in_cone_queue) > 0:
-            values.append(torch.mean(cos_sim[cell][torch.tensor(points_in_cone_queue)]).item())
+            values.append(torch.mean(cos_sim_cell[torch.tensor(points_in_cone_queue)]).item())
             ranges.append([position_velocity, np.min([position_velocity + distance, 2 * np.pi])])
         position_velocity += distance
 
@@ -227,8 +241,8 @@ def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: tor
             point = points_outside_cone_queue.popleft()
             # Add the point to the cone
             points_in_cone_queue.append(point)
-            # assert (aligned_theta[cell][points_in_cone_queue[-1]] - aligned_theta[cell][points_in_cone_queue[0]]) % (2 * np.pi) <= 2*gamma+1e-4, \
-            #    f"Points in cone are not within the cone size, {aligned_theta[cell][points_in_cone_queue[-1]]:.2f} - {aligned_theta[cell][points_in_cone_queue[0]]:.2f} = {(aligned_theta[cell][points_in_cone_queue[-1]] - aligned_theta[cell][points_in_cone_queue[0]]) % (2 * np.pi)} > {2*gamma}. {position_velocity=:.2f}, {distance=:.2f}, {lower_limit_cone=:.2f}, {upper_limit_cone=:.2f}"
+            # assert (aligned_theta_cell[points_in_cone_queue[-1]] - aligned_theta_cell[points_in_cone_queue[0]]) % (2 * np.pi) <= 2*gamma+1e-4, \
+            #    f"Points in cone are not within the cone size, {aligned_theta_cell[points_in_cone_queue[-1]]:.2f} - {aligned_theta_cell[points_in_cone_queue[0]]:.2f} = {(aligned_theta_cell[points_in_cone_queue[-1]] - aligned_theta_cell[points_in_cone_queue[0]]) % (2 * np.pi)} > {2*gamma}. {position_velocity=:.2f}, {distance=:.2f}, {lower_limit_cone=:.2f}, {upper_limit_cone=:.2f}"
         else:
             # Remove the point inside the cone from the queue
             point = points_in_cone_queue.popleft()
@@ -241,17 +255,20 @@ def compute_step_statistics(cell: int, cos_sim: torch.Tensor, aligned_theta: tor
 _WORKER_COS_SIM = None
 _WORKER_ALIGNED_THETA = None
 _WORKER_GAMMA = None
+_WORKER_NUMBER_NEIGHBORS_TO_SAMPLE_FROM = None
 
 
-def _init_worker(cos_sim_, aligned_theta_, gamma_):
+def _init_worker(cos_sim_, aligned_theta_, gamma_, number_neighbors_to_sample_from_):
     """Initializer run once in each worker process to store large arrays as globals."""
-    global _WORKER_COS_SIM, _WORKER_ALIGNED_THETA, _WORKER_GAMMA
+    global _WORKER_COS_SIM, _WORKER_ALIGNED_THETA, _WORKER_GAMMA, _WORKER_NUMBER_NEIGHBORS_TO_SAMPLE_FROM
     _WORKER_COS_SIM = cos_sim_
     _WORKER_ALIGNED_THETA = aligned_theta_
     _WORKER_GAMMA = gamma_
+    _WORKER_NUMBER_NEIGHBORS_TO_SAMPLE_FROM = number_neighbors_to_sample_from_
 
 
 def _worker_cell(cell_idx):
     """Worker-callable: computes (ranges, values) for one cell using module-global data."""
     # compute_step_statistics returns (ranges, values) or (None, None)
-    return compute_step_statistics(cell_idx, _WORKER_COS_SIM, _WORKER_ALIGNED_THETA, _WORKER_GAMMA)
+    return compute_step_statistics(cell_idx, _WORKER_COS_SIM, _WORKER_ALIGNED_THETA, _WORKER_GAMMA,
+                                   _WORKER_NUMBER_NEIGHBORS_TO_SAMPLE_FROM[cell_idx])
